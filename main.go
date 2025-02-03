@@ -101,7 +101,7 @@ func exec(cmd string, echo bool) *script.Pipe {
 	if CLOUDSDK_AUTH_CREDENTIAL_FILE_OVERRIDE() != "" {
 		env := []string{"CLOUDSDK_AUTH_CREDENTIAL_FILE_OVERRIDE=" + CLOUDSDK_AUTH_CREDENTIAL_FILE_OVERRIDE()}
 		p = p.WithEnv(env)
-		fmt.Println("override " + color("CLOUDSDK_AUTH_CREDENTIAL_FILE_OVERRIDE", c.Magenta))
+		fmt.Println("override", color("CLOUDSDK_AUTH_CREDENTIAL_FILE_OVERRIDE", c.Magenta))
 	}
 	return p
 }
@@ -413,10 +413,12 @@ func init() {
 		}
 	}
 	v := map[string]string{
-		"CLOUDSDK_AUTH_CREDENTIAL_FILE_OVERRIDE": CLOUDSDK_AUTH_CREDENTIAL_FILE_OVERRIDE(),
-		"PROJECT":                                PROJECT(),
-		"REGION":                                 REGION(),
-		"IMAGE":                                  IMAGE(),
+		"PROJECT": PROJECT(),
+		"REGION":  REGION(),
+		"IMAGE":   IMAGE(),
+	}
+	if CLOUDSDK_AUTH_CREDENTIAL_FILE_OVERRIDE() != "" {
+		v["CLOUDSDK_AUTH_CREDENTIAL_FILE_OVERRIDE"] = CLOUDSDK_AUTH_CREDENTIAL_FILE_OVERRIDE()
 	}
 	if variables["SERVICE_NAME"] != "" {
 		v["SERVICE_NAME"] = variables["SERVICE_NAME"]
