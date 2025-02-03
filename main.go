@@ -40,6 +40,9 @@ func main() {
 		case "d", "deploy":
 			deploy()
 
+		case "b", "bounce":
+			bounce()
+
 		case "m", "metadata":
 			metadata()
 
@@ -266,6 +269,8 @@ func color(text string, colorizer colorFunc) string {
 }
 
 func confirm(message string) bool {
+	fmt.Println()
+
 	yes := true
 	prompt := &survey.Confirm{Message: message, Default: yes}
 	err := survey.AskOne(prompt, &yes)
@@ -437,6 +442,29 @@ func deploy() {
 	notify("deployed")
 }
 
+func bounce() {
+	health()
+
+	serviceName := SERVICE()
+	service := serviceInfo(serviceName, PROJECT(), REGION())
+
+	fmt.Println("service", color(serviceLink(PROJECT(), REGION(), serviceName), c.Blue))
+
+	image := service.Spec.Template.Spec.Containers[0].Image
+	fmt.Println("image", color(image, c.Yellow))
+	fmt.Println(registryLink(image))
+
+	if !confirm(fmt.Sprintf("bounce [%s]", color(image, c.Yellow))) {
+		return
+	}
+
+	cmd := deployCmd(serviceName, image, PROJECT(), REGION())
+	cmd += " --update-env-vars BOUNCED=" + time.Now().Format(time.RFC3339)
+	run(cmd)
+
+	notify("bounced")
+}
+
 func metadata() {
 	images := images(true)
 
@@ -474,7 +502,7 @@ func health() {
 	service := serviceInfo(SERVICE(), PROJECT(), REGION())
 	url := service.Status.Address.URL + "/health"
 
-	fmt.Println(color(url, c.White))
+	fmt.Println("\n" + color("GET ", c.Blue) + color(url, c.White))
 	script.Get(url).Stdout()
 }
 
