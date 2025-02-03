@@ -1,7 +1,5 @@
 package main
 
-// CLOUDSDK_AUTH_CREDENTIAL_FILE_OVERRIDE
-
 import (
 	"bytes"
 	"encoding/json"
@@ -387,6 +385,7 @@ func SERVICE() string {
 	var selection string
 	err := survey.AskOne(prompt, &selection, survey.WithValidator(survey.Required))
 	check(err)
+	variables["SERVICE_NAME"] = selection
 	return selection
 }
 
@@ -413,7 +412,19 @@ func init() {
 			parseVariables(string(content), variables)
 		}
 	}
-	b, err := json.MarshalIndent(variables, "", "  ")
+	v := map[string]string{
+		"CLOUDSDK_AUTH_CREDENTIAL_FILE_OVERRIDE": CLOUDSDK_AUTH_CREDENTIAL_FILE_OVERRIDE(),
+		"PROJECT":                                PROJECT(),
+		"REGION":                                 REGION(),
+		"IMAGE":                                  IMAGE(),
+	}
+	if variables["SERVICE_NAME"] == "" {
+		v["SERVICE_NAME"] = variables["SERVICE_NAMES"]
+	}
+	if variables["SERVICE_NAMES"] == "" {
+		v["SERVICE_NAMES"] = variables["SERVICES_NAME"]
+	}
+	b, err := json.MarshalIndent(v, "", "  ")
 	check(err)
 	fmt.Println(string(b))
 }
