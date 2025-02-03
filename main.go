@@ -99,7 +99,13 @@ func exec(cmd string, echo bool) *script.Pipe {
 	if echo {
 		fmt.Println("\n" + color(cmd, c.White))
 	}
-	return script.Exec(cmd).WithStderr(stderr)
+	p := script.Exec(cmd).WithStderr(stderr)
+	if CLOUDSDK_AUTH_CREDENTIAL_FILE_OVERRIDE() != "" {
+		env := []string{"CLOUDSDK_AUTH_CREDENTIAL_FILE_OVERRIDE=" + CLOUDSDK_AUTH_CREDENTIAL_FILE_OVERRIDE()}
+		p = p.WithEnv(env)
+		fmt.Println("override " + color("CLOUDSDK_AUTH_CREDENTIAL_FILE_OVERRIDE", c.Magenta))
+	}
+	return p
 }
 
 func capture(cmd string, echo bool) []byte {
@@ -335,10 +341,18 @@ func notify(msg string) {
 func parseVariables(content string, values map[string]string) {
 	lines := strings.Split(content, "\n")
 	for _, line := range lines {
-		if strings.HasPrefix("# \t", line) {
+		line = strings.TrimSpace(line)
+		if line == "" {
+			continue
+		}
+		c := line[0:1]
+		if strings.Contains("#; \t", c) {
 			continue
 		}
 		parts := strings.Split(line, "=")
+		if len(parts) < 2 {
+			continue
+		}
 		name := strings.TrimSpace(parts[0])
 		value := strings.TrimSpace(parts[1])
 		if name == "" || value == "" {
@@ -382,6 +396,10 @@ func REGION() string {
 
 func IMAGE() string {
 	return variables["REPO"] + "/" + variables["NAME"]
+}
+
+func CLOUDSDK_AUTH_CREDENTIAL_FILE_OVERRIDE() string {
+	return variables["CLOUDSDK_AUTH_CREDENTIAL_FILE_OVERRIDE"]
 }
 
 // ---
