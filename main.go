@@ -418,10 +418,10 @@ func init() {
 		"REGION":                                 REGION(),
 		"IMAGE":                                  IMAGE(),
 	}
-	if variables["SERVICE_NAME"] == "" {
-		v["SERVICE_NAME"] = variables["SERVICE_NAMES"]
+	if variables["SERVICE_NAME"] != "" {
+		v["SERVICE_NAME"] = variables["SERVICE_NAME"]
 	}
-	if variables["SERVICE_NAMES"] == "" {
+	if variables["SERVICE_NAMES"] != "" {
 		v["SERVICE_NAMES"] = variables["SERVICES_NAME"]
 	}
 	b, err := json.MarshalIndent(v, "", "  ")
