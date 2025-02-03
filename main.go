@@ -492,7 +492,7 @@ func info() {
 	currentImage := service.Spec.Template.Spec.Containers[0].Image
 	fmt.Println("image", color(currentImage, c.Yellow))
 	if strings.Contains(currentImage, "/") {
-		// If the image is fully qualified, print it as a link
+		// If the image is fully qualified, print it as a link.
 		fmt.Println(registryLink(currentImage))
 	}
 	health()
