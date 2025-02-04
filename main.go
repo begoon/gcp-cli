@@ -404,7 +404,7 @@ func CLOUDSDK_AUTH_CREDENTIAL_FILE_OVERRIDE() string {
 // ---
 
 func init() {
-	files := []string{".env"}
+	files := []string{".env", "Makefile"}
 	fmt.Println("variables", files)
 	for _, file := range files {
 		content, err := os.ReadFile(file)
@@ -420,11 +420,11 @@ func init() {
 	if CLOUDSDK_AUTH_CREDENTIAL_FILE_OVERRIDE() != "" {
 		v["CLOUDSDK_AUTH_CREDENTIAL_FILE_OVERRIDE"] = CLOUDSDK_AUTH_CREDENTIAL_FILE_OVERRIDE()
 	}
-	if variables["SERVICE_NAME"] != "" {
-		v["SERVICE_NAME"] = variables["SERVICE_NAME"]
+	if t := variables["SERVICE_NAME"]; t != "" {
+		v["SERVICE_NAME"] = t
 	}
-	if variables["SERVICE_NAMES"] != "" {
-		v["SERVICE_NAMES"] = variables["SERVICES_NAME"]
+	if t := variables["SERVICE_NAMES"]; t != "" {
+		v["SERVICE_NAMES"] = t
 	}
 	b, err := json.MarshalIndent(v, "", "  ")
 	check(err)
