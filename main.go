@@ -6,6 +6,7 @@ import (
 	"flag"
 	"fmt"
 	"os"
+	"runtime/debug"
 	"slices"
 	"strconv"
 	"strings"
@@ -19,6 +20,17 @@ import (
 )
 
 func main() {
+	flag.Usage = func() {
+		fmt.Printf("usage: %s command [command]...", os.Args[0])
+		fmt.Println("commands:")
+		fmt.Println("  h, health      check health")
+		fmt.Println("  r, revisions   list revisions")
+		fmt.Println("  w, wait        wait for new iamge revision")
+		fmt.Println("  i, info        show service info")
+		fmt.Println("  d, deploy      deploy a revision")
+		fmt.Println("  b, bounce      bounce the service")
+		fmt.Println("  m, metadata    show image metadata")
+	}
 	flag.Parse()
 
 	for _, cmd := range flag.Args() {
@@ -43,6 +55,11 @@ func main() {
 
 		case "m", "metadata":
 			metadata()
+
+		case "x":
+			i, _ := debug.ReadBuildInfo()
+			fmt.Println(i)
+			os.Exit(0)
 
 		default:
 			die("unknown command: %s", cmd)
@@ -85,7 +102,7 @@ func textualizeVersions(images []Image) []string {
 }
 
 func die(format string, args ...interface{}) {
-	fmt.Printf(format+"\n", args...)
+	fmt.Println(color(fmt.Sprintf(format+"\n", args...), c.Red))
 	os.Exit(1)
 }
 
@@ -113,7 +130,7 @@ func capture(cmd string, echo bool) []byte {
 }
 
 func run(cmd string) {
-	_, err := exec(cmd, true).Stdout()
+	_, err := exec(cmd, true).WithStderr(os.Stdout).Stdout()
 	check(err)
 }
 
@@ -226,7 +243,6 @@ func formatVersion(i Image) string {
 	t, err := time.Parse(time.RFC3339, i.CreateTime)
 	check(err)
 
-	// since := HumanizeDuration(time.Since(t))
 	datetime := t.Format(time.DateTime)
 	version := trimVersion(i.Version)
 	size := humanizeSize(atoi(i.Metadata.ImageSizeBytes))
@@ -534,7 +550,17 @@ func health() {
 	url := service.Status.Address.URL + "/health"
 
 	fmt.Println("\n" + color("GET ", c.Blue) + color(url, c.White))
-	script.Get(url).Stdout()
+
+	b, err := script.Get(url).Bytes()
+	check(err)
+
+	var v interface{}
+	check(json.NewDecoder(bytes.NewReader(b)).Decode(&v))
+
+	b, err = json.MarshalIndent(v, "", "  ")
+	check(err)
+
+	fmt.Println(string(b))
 }
 
 func revisions() {

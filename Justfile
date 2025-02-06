@@ -1,11 +1,11 @@
 default: build install
 
 build:
-    go build -o cr main.go
+    CGO_ENABLED=0 go build -buildvcs=true -o cr main.go
 
 build-amd64:
     CGO_ENABLED=0 GOOS=linux GOARCH=amd64 \
-    go build -ldflags="-s -w" -o ./cr-amd64 .
+    go build -buildvcs=true -ldflags="-s -w" -o ./cr-amd64 .
     upx --best cr-amd64
 
 install:
