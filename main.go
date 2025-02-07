@@ -29,7 +29,10 @@ func main() {
 		fmt.Println("  i, info        show service info")
 		fmt.Println("  d, deploy      deploy a revision")
 		fmt.Println("  b, bounce      bounce the service")
+		fmt.Println("  c, create      create a new service")
 		fmt.Println("  m, metadata    show image metadata")
+		fmt.Println()
+		flag.PrintDefaults()
 	}
 	flag.Parse()
 
@@ -52,6 +55,9 @@ func main() {
 
 		case "b", "bounce":
 			bounce()
+
+		case "c", "create":
+			create()
 
 		case "m", "metadata":
 			metadata()
@@ -510,6 +516,66 @@ func bounce() {
 	run(cmd)
 
 	notify("bounced")
+}
+
+func createCmd(service, image, project, region string) string {
+	return T(fmt.Sprintf(
+		""+
+			"gcloud run deploy %s --image %s --region %s --project=%s "+
+			"--allow-unauthenticated "+
+			"--port=8000 "+
+			"--min-instances=0 "+
+			"--max-instances=1 "+
+			"--memory=512Mi "+
+			"--cpu=1 "+
+			"--ingress=all "+
+			"--execution-environment=gen2 ",
+		service, image, region, project))
+}
+
+func serviceExists(service, project, region string) bool {
+	cmd := describeCmd(service, project, region)
+	b, err := exec(cmd, true).Bytes()
+	fmt.Println(string(b))
+	return err == nil
+}
+
+var fStub = flag.String("stub", "", "stub image for new service")
+
+func create() {
+	serviceName := SERVICE()
+	if serviceExists(serviceName, PROJECT(), REGION()) {
+		die("service already exists: %s", serviceName)
+	}
+
+	image := *fStub
+
+	if *fStub == "" {
+		images := images(true)
+
+		index, version := selectImage(images, "UNDEFINED")
+		fmt.Println(">", version)
+		delimiter := ":"
+		if strings.HasPrefix(version, "sha256") {
+			delimiter = "@"
+		}
+		image = images[index].Package + delimiter + version
+	} else {
+		_, _, fqn := strings.Cut(image, "/")
+		if !fqn {
+			image = variables["REPO"] + "/" + image
+		}
+	}
+
+	if !confirm(fmt.Sprintf("deploy [%s]", color(image, c.Yellow))) {
+		return
+	}
+
+	cmd := createCmd(serviceName, image, PROJECT(), REGION())
+	cmd += " --update-env-vars CREATED_AT=" + time.Now().Format(time.RFC3339)
+	run(cmd)
+
+	notify("new service created")
 }
 
 func metadata() {
