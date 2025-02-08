@@ -5,6 +5,7 @@ import (
 	"encoding/json"
 	"flag"
 	"fmt"
+	"io"
 	"os"
 	"runtime/debug"
 	"slices"
@@ -31,6 +32,7 @@ func main() {
 		fmt.Println("  b, bounce      bounce the service")
 		fmt.Println("  c, create      create a new service")
 		fmt.Println("  m, metadata    show image metadata")
+		fmt.Println("  init           create .cr file")
 		fmt.Println()
 		flag.PrintDefaults()
 	}
@@ -61,6 +63,9 @@ func main() {
 
 		case "m", "metadata":
 			metadata()
+
+		case "init":
+			init_()
 
 		case "x":
 			i, _ := debug.ReadBuildInfo()
@@ -397,7 +402,10 @@ func SERVICE() string {
 	}
 	v = variables["SERVICE_NAMES"]
 	if v == "" {
-		die("missing SERVICE_NAME or SERVICE_NAMES")
+		v = variables["SERVICE"]
+		if v == "" {
+			die("missing SERVICE, SERVICE_NAME or SERVICE_NAMES")
+		}
 	}
 	services := strings.Split(v, ",")
 	if len(services) < 2 {
@@ -426,7 +434,7 @@ func CLOUDSDK_AUTH_CREDENTIAL_FILE_OVERRIDE() string {
 // ---
 
 func init() {
-	files := []string{".env", "Makefile"}
+	files := []string{".cr", ".env", "Makefile"}
 	fmt.Println("variables", files)
 	for _, file := range files {
 		content, err := os.ReadFile(file)
@@ -441,6 +449,9 @@ func init() {
 	}
 	if CLOUDSDK_AUTH_CREDENTIAL_FILE_OVERRIDE() != "" {
 		v["CLOUDSDK_AUTH_CREDENTIAL_FILE_OVERRIDE"] = CLOUDSDK_AUTH_CREDENTIAL_FILE_OVERRIDE()
+	}
+	if t := variables["SERVICE"]; t != "" {
+		v["SERVICE"] = t
 	}
 	if t := variables["SERVICE_NAME"]; t != "" {
 		v["SERVICE_NAME"] = t
@@ -656,3 +667,24 @@ func wait() {
 	}
 	notify("new revision is pushed")
 }
+
+func init_() {
+	cr := ".cr"
+	if _, err := os.Stat(cr); err == nil {
+		die(".cr already exists")
+	}
+	f, err := os.Create(cr)
+	check(err)
+	defer f.Close()
+	_, err = io.WriteString(f, strings.TrimSpace(CR)+"\n")
+	check(err)
+}
+
+const CR = `
+REPO=europe-docker.pkg.dev/PROJECT/REPO
+NAME=IMAGE
+
+PROJECT=project
+REGION=region
+SERVICE=service
+`
