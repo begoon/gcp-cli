@@ -37,11 +37,12 @@ func Completion(text string) {
 	os.Exit(0)
 }
 
-const format = `
-#compdef %[1]s
+const format = `#compdef %[1]s
+
 _%[1]s() {
   eval $(env _%[2]s_COMPLETE_ARGS="${words[2,$CURRENT]}" _%[2]s_COMPLETE=complete_zsh %[1]s)
 }
+
 compdef _%[1]s %[1]s
 `
 
