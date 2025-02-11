@@ -11,18 +11,28 @@ type Arg struct {
 	Name, Descr string
 }
 
-func NewArg(name, descr string) Arg {
+func newArg(name, descr string) Arg {
 	return Arg{Name: name, Descr: descr}
+}
+
+func NewArg(names, descr string) []Arg {
+	args := make([]Arg, 0)
+	for _, name := range strings.Split(names, ":") {
+		args = append(args, newArg(name, descr))
+	}
+	return args
 }
 
 func (a Arg) String() string {
 	return fmt.Sprintf(`"%s":"%s"`, a.Name, a.Descr)
 }
 
-func Args(args ...Arg) string {
-	v := make([]string, len(args))
+func Args(args ...[]Arg) string {
+	v := make([]string, 0, len(args))
 	for _, a := range args {
-		v = append(v, a.String())
+		for _, p := range a {
+			v = append(v, p.String())
+		}
 	}
 	return fmt.Sprintf(`_arguments '*: :((%s))'`, strings.Join(v, " "))
 }

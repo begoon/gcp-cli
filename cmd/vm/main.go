@@ -396,18 +396,14 @@ func sshHostsCmd() {
 }
 
 var CompletionRoot = zsh.Args(
-	zsh.NewArg("i", "VM instance info (default)"),
-	zsh.NewArg("p", "ping VM"),
-	zsh.NewArg("l", "list VM instances"),
-	zsh.NewArg("h", "list ~/"+sshConfig+" hosts and IPs"),
-	zsh.NewArg("e", "edit ~/"+sshConfig),
-	zsh.NewArg("m", "edit VM instance"),
-	zsh.NewArg("c", "update ~/"+sshConfig),
-	zsh.NewArg("up", "start VM"),
-	zsh.NewArg("down", "stop VM"),
-	zsh.NewArg("configure", "update ~/"+sshConfig),
-	zsh.NewArg("edit", "edit ~/"+sshConfig),
-	zsh.NewArg("vm", "edit VM instance"),
-	zsh.NewArg("hosts", "list ~/"+sshConfig+" hosts and IPs"),
+	zsh.NewArg("i:info", "VM instance info (default)"),
+	zsh.NewArg("p:ping", "ping VM"),
+	zsh.NewArg("l:list", "list VM instances"),
+	zsh.NewArg("h:hosts", "list ~/"+sshConfig+" hosts and IPs"),
+	zsh.NewArg("u:configure", "update ~/"+sshConfig),
+	zsh.NewArg("up:start", "start VM"),
+	zsh.NewArg("down:stop", "stop VM"),
+	zsh.NewArg("e:edit", "edit ~/"+sshConfig),
+	zsh.NewArg("m:vm", "edit VM instance ~/"+meVM),
 	zsh.NewArg("completion", "generate completion script"),
 )

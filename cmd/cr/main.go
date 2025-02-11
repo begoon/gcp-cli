@@ -493,13 +493,13 @@ SERVICE=service
 `
 
 var CompletionRoot = zsh.Args(
-	zsh.NewArg("h", "/health"),
-	zsh.NewArg("r", "list revisions"),
-	zsh.NewArg("w", "wait for new iamge revision"),
-	zsh.NewArg("i", "show service info"),
-	zsh.NewArg("d", "deploy a revision (default)"),
-	zsh.NewArg("b", "bounce the service"),
-	zsh.NewArg("c", "create a new service"),
-	zsh.NewArg("m", "show image metadata"),
+	zsh.NewArg("h:health", "/health"),
+	zsh.NewArg("r:list", "list revisions"),
+	zsh.NewArg("w:wait", "wait for new iamge revision"),
+	zsh.NewArg("i:info", "show service info"),
+	zsh.NewArg("d:deploy", "deploy a revision (default)"),
+	zsh.NewArg("b:bounce", "bounce the service"),
+	zsh.NewArg("c:create", "create a new service"),
+	zsh.NewArg("m:metadata", "show image metadata"),
 	zsh.NewArg("init", "create .cr file"),
 )
