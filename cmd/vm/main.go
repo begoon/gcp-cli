@@ -162,22 +162,30 @@ func pingCmd() {
 	if i.Status != "RUNNING" {
 		ext.Die("%q is not running", vm.Name)
 	}
-	fmt.Print(ext.Color("✔️ ", c.Blue))
-	ext.Quiet("ssh "+vm.Alias+" hostname", 10)
+
+	ssh := "ssh " + vm.Alias + " "
 
 	fmt.Print(ext.Color("✔️ ", c.Blue))
-	ext.Quiet("ssh " + vm.Alias + " uname -a")
+	ext.Quiet(ssh+"hostname", 10)
 
 	fmt.Print(ext.Color("✔️ ", c.Blue))
-	fmt.Println(strings.TrimSpace(string(ext.Capture("ssh "+vm.Alias+" uptime", false))))
+	ext.Quiet(ssh + "uname -a")
+
+	fmt.Print(ext.Color("✔️ ", c.Blue))
+	fmt.Println(strings.TrimSpace(string(ext.Capture(ssh+"uptime", false))))
 
 	fmt.Print(ext.Color("✔️ ", c.Blue))
 	fmt.Println(strings.ReplaceAll(strings.TrimSpace(
-		string(ext.Capture("ssh "+vm.Alias+" df -h /dev/sda1", false))),
+		string(ext.Capture(ssh+"df -h /dev/sda1", false))),
 		"\n", ext.Color("\n✔️ ", c.Blue)))
 
 	fmt.Print(ext.Color("✔️ ", c.Blue))
-	ext.Quiet("ssh " + vm.Alias + " curl -s https://api.ipify.org")
+	fmt.Println(strings.ReplaceAll(strings.TrimSpace(
+		string(ext.Capture(ssh+"lsmem --summary=only", false))),
+		"\n", ext.Color("\n✔️ ", c.Blue)))
+
+	fmt.Print(ext.Color("✔️ ", c.Blue))
+	ext.Quiet(ssh + "curl -s https://api.ipify.org")
 
 	fmt.Println()
 }
@@ -257,6 +265,7 @@ func stopCmd() {
 }
 
 func configureCmd(vm *VM, instance *Instance) {
+	confirm := instance == nil
 	if instance == nil {
 		instance = instanceInfo(vm, false)
 	}
@@ -314,8 +323,10 @@ func configureCmd(vm *VM, instance *Instance) {
 				", updated " + time.Now().Format("2006-01-02 15:04:05")
 			fmt.Println(ext.Color("+ "+update, c.White))
 
-			if !ext.Confirm("update " + vm.Alias + " in " + sshConfig) {
-				return
+			if confirm {
+				if !ext.Confirm("update " + vm.Alias + " in " + sshConfig) {
+					return
+				}
 			}
 
 			lines[i+1] = "  " + update
@@ -400,7 +411,7 @@ var CompletionRoot = zsh.Args(
 	zsh.NewArg("p:ping", "ping VM"),
 	zsh.NewArg("l:list", "list VM instances"),
 	zsh.NewArg("h:hosts", "list ~/"+sshConfig+" hosts and IPs"),
-	zsh.NewArg("u:configure", "update ~/"+sshConfig),
+	zsh.NewArg("c:configure", "update ~/"+sshConfig),
 	zsh.NewArg("up:start", "start VM"),
 	zsh.NewArg("down:stop", "stop VM"),
 	zsh.NewArg("e:edit", "edit ~/"+sshConfig),

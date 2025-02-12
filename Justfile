@@ -15,6 +15,7 @@ build-amd64:
 install:
     cp cr ~/bin
     cp vm ~/bin
+    cp path ~/bin
 
 VM := env("VM", "vmi")
 
