@@ -12,10 +12,10 @@ build-amd64:
     go build -buildvcs=true -trimpath -ldflags="-s -w" -o ./amd64 ./...
     upx -9 ./amd64/*
 
+BINS := "cr vm path ver"
+
 install:
-    cp cr ~/bin
-    cp vm ~/bin
-    cp path ~/bin
+    cp {{ BINS }} ~/.local/bin
 
 VM := env("VM", "vmi")
 
