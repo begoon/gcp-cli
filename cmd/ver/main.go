@@ -44,7 +44,7 @@ var (
 
 func main() {
 	flag.Usage = func() {
-		fmt.Printf("usage: %s [flags] [A.B.C | +]\n", os.Args[0])
+		fmt.Printf("usage: %s [flags] [A.B.C| +]\n", os.Args[0])
 		fmt.Println()
 		flag.PrintDefaults()
 	}
