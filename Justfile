@@ -15,9 +15,9 @@ build-amd64:
 BINS := "cr vm path ver"
 
 install:
-    cp {{ BINS }} ~/.local/bin
+    cp {{ BINS }} ~/bin
 
 VM := env("VM", "vmi")
 
 install-cr:
-    scp amd64/cr {{ VM }}:.local/bin/cr
+    scp amd64/cr {{ VM }}:bin/cr
