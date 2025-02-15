@@ -8,6 +8,7 @@ import (
 	"io/fs"
 	"os"
 	"path"
+	"strconv"
 	"strings"
 
 	"github.com/BurntSushi/toml"
@@ -44,7 +45,7 @@ var (
 
 func main() {
 	flag.Usage = func() {
-		fmt.Printf("usage: %s [flags] [A.B.C| +]\n", os.Args[0])
+		fmt.Printf("usage: %s [flags] [A.B.C | + | [+/-]N]\n", os.Args[0])
 		fmt.Println()
 		flag.PrintDefaults()
 	}
@@ -139,13 +140,27 @@ func updateVersion(filename, version string) string {
 	if newVersion == "" {
 		return version
 	}
+	increment := 0
 	if newVersion == "+" {
+		increment = 1
+	} else if newVersion == "-" {
+		increment = -1
+	} else {
+		n, err := strconv.ParseInt(newVersion, 10, 64)
+		if err != nil {
+			fmt.Println(c.BrightRed("(!)"), "invalid version increment", c.Red(newVersion))
+		}
+		increment = int(n)
+	}
+
+	if increment != 0 {
 		v := strings.Split(version, ".")
 		if len(v) < 3 {
 			ext.Die("expected version %q to have 3 parts", c.Red(version))
 		}
-		newVersion = fmt.Sprintf("%s.%s.%d", v[0], v[1], ext.Atoi(v[2])+1)
+		newVersion = fmt.Sprintf("%s.%s.%d", v[0], v[1], ext.Atoi(v[2])+int(increment))
 	}
+
 	newVersion = strings.TrimPrefix(newVersion, "v")
 	if newVersion == "" {
 		return version
