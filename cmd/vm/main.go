@@ -17,11 +17,11 @@ import (
 )
 
 type VM struct {
-	Project       string `json:"project"`
-	Zone          string `json:"zone"`
-	Configuration string `json:"configuration"`
-	Name          string `json:"name"`
-	Alias         string `json:"alias"`
+	Project string `json:"project"`
+	Zone    string `json:"zone"`
+	GAC     string `json:"gac"`
+	Name    string `json:"name"`
+	Alias   string `json:"alias"`
 }
 
 type Instance struct {
@@ -102,8 +102,8 @@ func instanceInfo(vm *VM, echo bool) *Instance {
 	i := Instance{}
 	cmd := fmt.Sprintf(""+
 		"gcloud compute instances describe %s "+
-		"--project %s --zone %s --configuration %s --format json",
-		vm.Name, vm.Project, vm.Zone, vm.Configuration)
+		"--project %s --zone %s --format json",
+		vm.Name, vm.Project, vm.Zone)
 	ext.Check(json.Unmarshal(ext.Capture(cmd, echo), &i))
 	return &i
 }
@@ -134,6 +134,12 @@ func vmInfo() *VM {
 	}
 	ext.Check(json.Unmarshal(b, vm))
 	fmt.Println("vm", ext.Color(vm.Name, c.Magenta))
+
+	if vm.GAC == "" {
+		ext.Die("gac not set in %s", meVM)
+	}
+	gac := os.ExpandEnv(vm.GAC)
+	ext.SetVariable("CLOUDSDK_AUTH_CREDENTIAL_FILE_OVERRIDE", gac)
 	return vm
 }
 
@@ -192,9 +198,7 @@ func pingCmd() {
 
 func listCmd() {
 	vm := vmInfo()
-	cmd := fmt.Sprintf(
-		"gcloud compute instances list --project %s --configuration %s",
-		vm.Project, vm.Configuration)
+	cmd := fmt.Sprintf("gcloud compute instances list --project %s", vm.Project)
 	ext.Run(cmd)
 }
 
@@ -230,9 +234,8 @@ func startCmd() {
 	}
 
 	cmd := fmt.Sprintf(""+
-		"gcloud compute instances start %s "+
-		"--project %s --zone %s --configuration %s",
-		vm.Name, vm.Project, vm.Zone, vm.Configuration)
+		"gcloud compute instances start %s --project %s --zone %s",
+		vm.Name, vm.Project, vm.Zone)
 	ext.Run(cmd)
 
 	awaitInstanceStatus(instance, "RUNNING")
@@ -256,9 +259,8 @@ func stopCmd() {
 	}
 
 	cmd := fmt.Sprintf(""+
-		"gcloud compute instances stop %s "+
-		"--project %s --zone %s --configuration %s",
-		vm.Name, vm.Project, vm.Zone, vm.Configuration)
+		"gcloud compute instances stop %s --project %s --zone %s",
+		vm.Name, vm.Project, vm.Zone)
 	ext.Run(cmd)
 
 	awaitInstanceStatus(instance, "TERMINATED")

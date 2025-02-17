@@ -25,8 +25,9 @@ func Exec(cmd string, echo bool) *script.Pipe {
 		fmt.Println("\n" + Color(cmd, c.White))
 	}
 	p := script.Exec(cmd).WithStderr(stderr)
-	if CLOUDSDK_AUTH_CREDENTIAL_FILE_OVERRIDE() != "" {
-		env := []string{"CLOUDSDK_AUTH_CREDENTIAL_FILE_OVERRIDE=" + CLOUDSDK_AUTH_CREDENTIAL_FILE_OVERRIDE()}
+	gac := CLOUDSDK_AUTH_CREDENTIAL_FILE_OVERRIDE()
+	if gac != "" {
+		env := []string{"CLOUDSDK_AUTH_CREDENTIAL_FILE_OVERRIDE=" + gac}
 		p = p.WithEnv(env)
 		fmt.Println("override", Color("CLOUDSDK_AUTH_CREDENTIAL_FILE_OVERRIDE", c.Magenta))
 	}
@@ -248,4 +249,8 @@ func LoadVariables() {
 	b, err := json.MarshalIndent(v, "", "  ")
 	Check(err)
 	fmt.Println(string(b))
+}
+
+func SetVariable(name, value string) {
+	variables[name] = value
 }
