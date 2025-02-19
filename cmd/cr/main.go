@@ -6,7 +6,9 @@ import (
 	"flag"
 	"fmt"
 	"io"
+	"io/fs"
 	"os"
+	"path"
 	"runtime/debug"
 	"slices"
 	"strings"
@@ -36,6 +38,7 @@ func main() {
 		fmt.Println("  b, bounce      bounce the service")
 		fmt.Println("  c, create      create a new service")
 		fmt.Println("  m, metadata    show image metadata")
+		fmt.Println("  t, terraform   cross-reference terraform")
 		fmt.Println("  init           create .cr file")
 		fmt.Println("  completion     generate completion script")
 		fmt.Println()
@@ -70,16 +73,19 @@ func main() {
 			infoCmd()
 
 		case "d", "deploy":
-			deploy()
+			deployCmd()
 
 		case "b", "bounce":
-			bounce()
+			bounceCmd()
 
 		case "c", "create":
-			create()
+			createCmd()
 
 		case "m", "metadata":
-			metadata()
+			metadataCmd()
+
+		case "t", "terraform":
+			terraformCmd()
 
 		case "init":
 			initCmd()
@@ -274,13 +280,13 @@ func notify(msg string) {
 
 // ---
 
-func deployCmd(service, image, project, region string) string {
+func deploy(service, image, project, region string) string {
 	return fmt.Sprintf(
 		"gcloud run deploy %s --image %s --region %s --project=%s",
 		service, image, region, project)
 }
 
-func deploy() {
+func deployCmd() {
 	serviceName := ext.SERVICE()
 	service := serviceInfo(serviceName, ext.PROJECT(), ext.REGION())
 
@@ -310,13 +316,13 @@ func deploy() {
 		return
 	}
 
-	cmd := deployCmd(serviceName, image, ext.PROJECT(), ext.REGION())
+	cmd := deploy(serviceName, image, ext.PROJECT(), ext.REGION())
 	ext.Run(cmd)
 
 	notify("deployed")
 }
 
-func bounce() {
+func bounceCmd() {
 	healthCmd()
 
 	serviceName := ext.SERVICE()
@@ -332,31 +338,16 @@ func bounce() {
 		return
 	}
 
-	cmd := deployCmd(serviceName, image, ext.PROJECT(), ext.REGION())
+	cmd := deploy(serviceName, image, ext.PROJECT(), ext.REGION())
 	cmd += " --update-env-vars BOUNCED=" + time.Now().Format(time.RFC3339)
 	ext.Run(cmd)
 
 	notify("bounced")
 }
 
-func createCmd(service, image, project, region string) string {
-	return fmt.Sprintf(
-		""+
-			"gcloud run deploy %s --image %s --region %s --project=%s "+
-			"--allow-unauthenticated "+
-			"--port=8000 "+
-			"--min-instances=0 "+
-			"--max-instances=1 "+
-			"--memory=512Mi "+
-			"--cpu=1 "+
-			"--ingress=all "+
-			"--execution-environment=gen2",
-		service, image, region, project)
-}
-
 var fStub = flag.String("stub", "", "stub image for new service")
 
-func create() {
+func createCmd() {
 	serviceName := ext.SERVICE()
 	if serviceExists(serviceName, ext.PROJECT(), ext.REGION()) {
 		ext.Die("service already exists: %s", serviceName)
@@ -385,14 +376,25 @@ func create() {
 		return
 	}
 
-	cmd := createCmd(serviceName, image, ext.PROJECT(), ext.REGION())
-	cmd += " --update-env-vars CREATED_AT=" + time.Now().Format(time.RFC3339)
+	cmd := fmt.Sprintf(""+
+		"gcloud run deploy %s --image %s --region %s --project=%s "+
+		"--allow-unauthenticated "+
+		"--port=8000 "+
+		"--min-instances=0 "+
+		"--max-instances=1 "+
+		"--memory=512Mi "+
+		"--cpu=1 "+
+		"--ingress=all "+
+		"--execution-environment=gen2 "+
+		"--update-env-vars CREATED_AT=%s",
+		serviceName, image, ext.PROJECT(), ext.REGION(), time.Now().Format(time.RFC3339))
+
 	ext.Run(cmd)
 
 	notify("new service created")
 }
 
-func metadata() {
+func metadataCmd() {
 	images := queryImages(true)
 
 	index, version := selectImage(images, "")
@@ -492,6 +494,64 @@ REGION=region
 SERVICE=service
 `
 
+func terraformCmd() {
+	tf := ext.TF()
+	fmt.Println(tf)
+	files := markedMainTF(tf)
+
+	services := ext.SERVICES()
+	for i, s := range services {
+		parts := strings.SplitN(s, "-", 2)
+		if len(parts) != 2 {
+			ext.Die("service name must be in a form of 'env-name': %q", s)
+		}
+		services[i] = parts[1]
+	}
+	slices.Sort(services)
+	services = slices.Compact(services)
+	fmt.Println("@", services)
+
+	for _, file := range files {
+		lines := strings.Split(file.Content, "\n")
+		for i, v := range lines {
+			for _, s := range services {
+				needle := s + "_image_tag"
+				if strings.Contains(v, needle) && strings.Contains(v, `"`) {
+					fmt.Printf("%s:%d:\n%s\n", c.White(file.Name), i+1, v)
+				}
+			}
+		}
+	}
+}
+
+type markedFile struct {
+	Name    string
+	Content string
+}
+
+func markedMainTF(tf string) []markedFile {
+	files := []markedFile{}
+	fs.WalkDir(os.DirFS(tf), ".", func(name string, d fs.DirEntry, err error) error {
+		if err != nil {
+			return err
+		}
+		if d.IsDir() || !strings.HasSuffix(name, "main.tf") {
+			return nil
+		}
+		name = path.Join(tf, name)
+		content, err := os.ReadFile(name)
+		if err != nil {
+			ext.Die("read file: %v", err)
+		}
+		if !strings.Contains(string(content), "# @mark=") {
+			return nil
+		}
+		files = append(files, markedFile{Name: name, Content: string(content)})
+		return nil
+	})
+	return files
+}
+
 var CompletionRoot = zsh.Args(
 	zsh.NewArg("h:health", "/health"),
 	zsh.NewArg("r:list", "list revisions"),
@@ -501,5 +561,6 @@ var CompletionRoot = zsh.Args(
 	zsh.NewArg("b:bounce", "bounce the service"),
 	zsh.NewArg("c:create", "create a new service"),
 	zsh.NewArg("m:metadata", "show image metadata"),
+	zsh.NewArg("t:terraform", "cross-reference terraform"),
 	zsh.NewArg("init", "create .cr file"),
 )

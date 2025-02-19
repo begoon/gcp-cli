@@ -166,18 +166,7 @@ func PROJECT() string {
 }
 
 func SERVICE() string {
-	v := variables["SERVICE_NAME"]
-	if v != "" {
-		return v
-	}
-	v = variables["SERVICE_NAMES"]
-	if v == "" {
-		v = variables["SERVICE"]
-		if v == "" {
-			Die("missing SERVICE, SERVICE_NAME or SERVICE_NAMES")
-		}
-	}
-	services := strings.Split(v, ",")
+	services := SERVICES()
 	if len(services) < 2 {
 		return services[0]
 	}
@@ -187,6 +176,21 @@ func SERVICE() string {
 	Check(err)
 	variables["SERVICE"] = selection
 	return selection
+}
+
+func SERVICES() []string {
+	v := variables["SERVICE_NAME"]
+	if v != "" {
+		return []string{v}
+	}
+	v = variables["SERVICE_NAMES"]
+	if v == "" {
+		v = variables["SERVICE"]
+		if v == "" {
+			Die("missing SERVICE, SERVICE_NAME or SERVICE_NAMES")
+		}
+	}
+	return strings.Split(v, ",")
 }
 
 func REGION() string {
@@ -203,6 +207,10 @@ func NAME() string {
 
 func REPO() string {
 	return v("REPO")
+}
+
+func TF() string {
+	return v("TF")
 }
 
 func v(name string) string {
