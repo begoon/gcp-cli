@@ -7,6 +7,7 @@ import (
 	"os"
 	"strconv"
 	"strings"
+	"sync"
 	"time"
 
 	"github.com/AlecAivazis/survey/v2"
@@ -20,6 +21,8 @@ func Die(format string, args ...interface{}) {
 	os.Exit(1)
 }
 
+var once sync.Once
+
 func Exec(cmd string, echo bool) *script.Pipe {
 	if echo {
 		fmt.Println("\n" + Color(cmd, c.White))
@@ -29,7 +32,9 @@ func Exec(cmd string, echo bool) *script.Pipe {
 	if gac != "" {
 		env := []string{"CLOUDSDK_AUTH_CREDENTIAL_FILE_OVERRIDE=" + gac}
 		p = p.WithEnv(env)
-		fmt.Println("override", Color("CLOUDSDK_AUTH_CREDENTIAL_FILE_OVERRIDE", c.Magenta))
+		once.Do(func() {
+			fmt.Println("override", Color("CLOUDSDK_AUTH_CREDENTIAL_FILE_OVERRIDE", c.Magenta))
+		})
 	}
 	return p
 }
