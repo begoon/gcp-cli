@@ -11,6 +11,7 @@ import (
 	"time"
 
 	"github.com/AlecAivazis/survey/v2"
+	"golang.org/x/term"
 
 	"github.com/bitfield/script"
 	c "github.com/logrusorgru/aurora/v4"
@@ -266,4 +267,58 @@ func LoadVariables() {
 
 func SetVariable(name, value string) {
 	variables[name] = value
+}
+
+func Selector(prompt string, options []string) string {
+	fmt.Print(c.BrightYellow(prompt))
+	fmt.Println(" (use ↑↓ to select, press ↵ to select, ␛ or 'q' to cancel):")
+
+	oldState, err := term.MakeRaw(int(os.Stdin.Fd()))
+	if err != nil {
+		Die("setting terminal to raw mode: %s", err)
+	}
+	defer term.Restore(int(os.Stdin.Fd()), oldState)
+
+	selected := 0
+	sz := len(options)
+
+	buf := make([]byte, 3)
+	for {
+		for i, option := range options {
+			if i == selected {
+				fmt.Print("> ")
+				fmt.Print(c.White(option))
+			} else {
+				fmt.Print("  ")
+				fmt.Print(option)
+			}
+			fmt.Println("\r")
+		}
+		n, err := os.Stdin.Read(buf)
+		if err != nil {
+			Die("read stdin: %s", err)
+		}
+
+		// ESC or Ctrl+C to cancel
+		if n == 1 && (buf[0] == 27 || buf[0] == 3 || buf[0] == 'q') {
+			fmt.Println(c.Gray(12, "cancelled\r"))
+			return ""
+		}
+
+		if n == 1 && buf[0] == 13 {
+			return options[selected]
+		}
+
+		if n == 3 && buf[0] == 27 && buf[1] == 91 {
+			switch buf[2] {
+			case 65:
+				selected = (selected - 1 + sz) % sz
+			case 66:
+				selected = (selected + 1) % sz
+			}
+		}
+		const ANSI_UP = "\033[A"
+		fmt.Print(strings.Repeat(ANSI_UP, len(options)))
+		fmt.Print("\r")
+	}
 }
