@@ -23,6 +23,7 @@ var projectFiles = []string{"VERSION.txt", "package.json", "pyproject.toml"}
 type PyProject struct {
 	Project struct {
 		Version string `toml:"version"`
+		Name    string `toml:"name"`
 	} `toml:"project"`
 }
 
@@ -30,6 +31,7 @@ type PyPoetryProject struct {
 	Tool struct {
 		Poetry struct {
 			Version string `toml:"version"`
+			Name    string `toml:"name"`
 		} `toml:"poetry"`
 	} `toml:"tool"`
 }
@@ -58,6 +60,9 @@ func main() {
 	}
 
 	for _, name := range files {
+		if path.Dir(name) != "." {
+			continue
+		}
 		path := path.Join(*flagBase, name)
 		content, err := os.ReadFile(path)
 		if err != nil {
@@ -65,7 +70,7 @@ func main() {
 		}
 		switch {
 		case strings.HasSuffix(name, "VERSION.txt"):
-			processVersionTxt(path, content)
+			processVersionTXT(path, content)
 		case strings.HasSuffix(name, "package.json"):
 			processPackageJSON(path, content)
 		case strings.HasSuffix(name, "pyproject.toml"):
@@ -76,6 +81,7 @@ func main() {
 
 func processPyProjectTOML(file string, content []byte) {
 	var version string
+	var name string
 
 	var py PyProject
 	err := toml.Unmarshal(content, &py)
@@ -83,6 +89,7 @@ func processPyProjectTOML(file string, content []byte) {
 		ext.Die("unmarshaling %s / PEP-621: %s", file, err)
 	}
 	version = py.Project.Version
+	name = py.Project.Name
 
 	if version == "" {
 		var pp PyPoetryProject
@@ -91,11 +98,46 @@ func processPyProjectTOML(file string, content []byte) {
 			ext.Die("unmarshaling %s / Poetry: %s", file, err)
 		}
 		version = pp.Tool.Poetry.Version
+		name = pp.Tool.Poetry.Name
 	}
 	if version == "" {
 		ext.Die("version not found in %q (PEP-621 or Poetry formats)", file)
 	}
 	updateVersionFile(file, version, content)
+	updateUvLockFile(name, version)
+}
+
+func updateUvLockFile(name, version string) {
+	content, err := os.ReadFile("uv.lock")
+	if err != nil {
+		if *flagVerbose {
+			fmt.Println(c.BrightRed("(!)"), "uv.lock not found")
+		}
+		return
+	}
+	lines := strings.Split(string(content), "\n")
+	for i := range lines {
+		if i >= len(lines)-3 {
+			break
+		}
+		if !strings.HasPrefix(lines[i], "[[package]]") {
+			continue
+		}
+		if !strings.Contains(lines[i+1], fmt.Sprintf(`name = "%s"`, name)) {
+			continue
+		}
+		if !strings.Contains(lines[i+2], "version") {
+			continue
+		}
+		lines[i+2] = fmt.Sprintf(`version = "%s"`, version)
+		b := []byte(strings.Join(lines, "\n"))
+		err = os.WriteFile("uv.lock", b, 0o644)
+		if err != nil {
+			ext.Die("writing uv.lock: %s", err)
+		}
+		fmt.Println("written to", c.Cyan("uv.lock"))
+		break
+	}
 }
 
 func processPackageJSON(file string, content []byte) {
@@ -113,7 +155,7 @@ func processPackageJSON(file string, content []byte) {
 	updateVersionFile(file, pj.Version, content)
 }
 
-func processVersionTxt(file string, content []byte) {
+func processVersionTXT(file string, content []byte) {
 	version := strings.TrimSpace(string(content))
 	updateVersionFile(file, version, content)
 }
@@ -145,7 +187,7 @@ func updateVersion(filename, version string) string {
 		increment = 1
 	} else if newVersion == "-" {
 		increment = -1
-	} else {
+	} else if !strings.Contains(newVersion, ".") {
 		n, err := strconv.ParseInt(newVersion, 10, 64)
 		if err != nil {
 			fmt.Println(c.BrightRed("(!)"), "invalid version increment", c.Red(newVersion))
