@@ -103,8 +103,8 @@ func processPyProjectTOML(file string, content []byte) {
 	if version == "" {
 		ext.Die("version not found in %q (PEP-621 or Poetry formats)", file)
 	}
-	updateVersionFile(file, version, content)
-	updateUvLockFile(name, version)
+	newVersion := updateVersionFile(file, version, content)
+	updateUvLockFile(name, newVersion)
 }
 
 func updateUvLockFile(name, version string) {
@@ -160,10 +160,10 @@ func processVersionTXT(file string, content []byte) {
 	updateVersionFile(file, version, content)
 }
 
-func updateVersionFile(filename, version string, content []byte) {
+func updateVersionFile(filename, version string, content []byte) string {
 	newVersion := updateVersion(filename, version)
 	if newVersion == version {
-		return
+		return version
 	}
 	b := []byte(strings.Replace(string(content), version, newVersion, 1))
 	err := os.WriteFile(filename, b, 0o644)
@@ -171,6 +171,7 @@ func updateVersionFile(filename, version string, content []byte) {
 		ext.Die("writing %s: %s", filename, err)
 	}
 	fmt.Println("written to", c.Cyan(filename))
+	return newVersion
 }
 
 func updateVersion(filename, version string) string {
