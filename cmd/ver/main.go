@@ -60,7 +60,10 @@ func main() {
 	}
 
 	for _, name := range files {
-		if path.Dir(name) != "." {
+		if *flagVerbose {
+			fmt.Println("processing", c.Yellow(name))
+		}
+		if path.Dir(name) != "." && !strings.HasSuffix(name, "VERSION.txt") {
 			continue
 		}
 		path := path.Join(*flagBase, name)
