@@ -13,7 +13,7 @@ import (
 	"gcp/lib/ext"
 )
 
-var places = []string{"github", "iproov", "vmi"}
+var places = []string{"github", "iproov", "vmi", "other"}
 
 func main() {
 	verbose := flag.Bool("v", false, "verbose")
