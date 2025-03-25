@@ -12,7 +12,7 @@ build-amd64:
     go build -buildvcs=true -trimpath -ldflags="-s -w" -o ./amd64 ./...
     upx -9 ./amd64/*
 
-BINS := "cr vm path ver"
+BINS := "cr vm path ver vs tabber try"
 
 install:
     cp {{ BINS }} ~/bin
@@ -21,3 +21,7 @@ VM := env("VM", "vmi")
 
 install-cr:
     scp amd64/cr {{ VM }}:bin/cr
+
+clean:
+    -rm -rf {{ BINS }}
+    -rm -rf amd64

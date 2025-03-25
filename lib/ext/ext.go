@@ -80,7 +80,7 @@ func Check(err error, extra ...string) {
 		if stderr.Len() > 0 {
 			fmt.Println("stderr:", stderr.String())
 		}
-		Die("error: %v [%s]", err, strings.Join(extra, " "))
+		Die("error: %v %s", err, strings.Join(extra, " "))
 	}
 	stderr.Reset()
 }
@@ -321,4 +321,18 @@ func Selector(prompt string, options []string) string {
 		fmt.Print(strings.Repeat(ANSI_UP, len(options)))
 		fmt.Print("\r")
 	}
+}
+
+func FuzzySelector(prompt string, options []string) string {
+	prompt = fmt.Sprintf("%s (use ↑↓ to select, press ↵ to select, control-c to break):", prompt)
+	selected := 0
+	err := survey.AskOne(&survey.Select{
+		Message: prompt,
+		Options: options,
+		Filter: func(filterValue string, optValue string, optIndex int) bool {
+			return strings.Contains(optValue, filterValue)
+		},
+	}, &selected)
+	Check(err)
+	return options[selected]
 }

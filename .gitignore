@@ -6,5 +6,8 @@
 /vm*
 /path*
 /ver*
+/vs*
+/try*
+/tabber
 
 amd64/
