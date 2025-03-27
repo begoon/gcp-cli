@@ -530,6 +530,7 @@ type markedFile struct {
 }
 
 func markedMainTF(tf string) []markedFile {
+	project := ext.PROJECT()
 	files := []markedFile{}
 	fs.WalkDir(os.DirFS(tf), ".", func(name string, d fs.DirEntry, err error) error {
 		if err != nil {
@@ -543,7 +544,7 @@ func markedMainTF(tf string) []markedFile {
 		if err != nil {
 			ext.Die("read file: %v", err)
 		}
-		if !strings.Contains(string(content), "# @mark=") {
+		if !strings.Contains(string(content), "# @mark=") || !strings.Contains(string(content), project) {
 			return nil
 		}
 		files = append(files, markedFile{Name: name, Content: string(content)})
