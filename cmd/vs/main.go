@@ -46,6 +46,13 @@ func main() {
 		home = os.Getenv("HOME")
 		cmd := fmt.Sprintf(`sh -c "ls -d1 %s/*/"`, path.Join(home, place))
 		dirs = strings.Split(string(ext.Capture(cmd, *verbose)), "\n")
+
+		if place == "github" {
+			abc := "abc"
+			cmd := fmt.Sprintf(`sh -c "ls -d1 %s/*/"`, path.Join(home, place, abc))
+			dirsABC := strings.Split(string(ext.Capture(cmd, *verbose)), "\n")
+			dirs = append(dirs, dirsABC...)
+		}
 	}
 
 	if *verbose {
@@ -53,12 +60,6 @@ func main() {
 		fmt.Println(strings.Join(dirs, "\n"))
 	}
 	dir := selectDir(dirs, home, place)
-
-	if strings.HasSuffix(dir, "/abc/") {
-		cmd := fmt.Sprintf(`sh -c "ls -d1 %s/*/"`, path.Join(home, dir))
-		dirs = strings.Split(string(ext.Capture(cmd, *verbose)), "\n")
-		dir = selectDir(dirs, home, place+"-abc")
-	}
 
 	if *verbose {
 		fmt.Println("DIR", c.Yellow(dir))
