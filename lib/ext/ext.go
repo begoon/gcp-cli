@@ -200,6 +200,27 @@ func SERVICES() []string {
 }
 
 func REGION() string {
+	regions := variables["REGIONS"]
+	if regions == "" {
+		return v("REGION")
+	}
+	service := variables["SERVICE"]
+	if service == "" {
+		service = SERVICE()
+		variables["SERVICE"] = service
+	}
+	services_overrides := strings.SplitSeq(regions, ",")
+	for override := range services_overrides {
+		parts := strings.Split(override, ":")
+		if len(parts) < 2 {
+			Die("invalid REGIONS format, expected SERVICE:REGION, not %s", override)
+		}
+		if parts[0] == service {
+			variables["REGION"] = parts[1]
+			fmt.Println("override region", c.BrightGreen(parts[1]), "for service", c.BrightGreen(service))
+			return parts[1]
+		}
+	}
 	return v("REGION")
 }
 
