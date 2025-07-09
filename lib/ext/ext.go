@@ -168,6 +168,27 @@ func parseVariables(content string, values map[string]string) {
 var variables = map[string]string{}
 
 func PROJECT() string {
+	projects := variables["PROJECTS"]
+	if projects == "" {
+		return v("PROJECT")
+	}
+	service := variables["SERVICE"]
+	if service == "" {
+		service = SERVICE()
+		variables["SERVICE"] = service
+	}
+	projects_overrides := strings.SplitSeq(projects, ",")
+	for override := range projects_overrides {
+		parts := strings.Split(override, ":")
+		if len(parts) < 2 {
+			Die("invalid PROJECTS format, expected SERVICE:REGION, not %s", override)
+		}
+		if parts[0] == service {
+			variables["PROJECT"] = parts[1]
+			fmt.Println("override project", c.BrightGreen(parts[1]), "for service", c.BrightGreen(service))
+			return parts[1]
+		}
+	}
 	return v("PROJECT")
 }
 
