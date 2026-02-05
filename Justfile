@@ -20,7 +20,10 @@ install:
 VM := env("VM", "vmi")
 
 install-cr:
-    scp amd64/cr {{ VM }}:bin/cr
+    scp amd64/cr {{ VM }}:.local/bin/
+
+install-path:
+    scp amd64/path {{ VM }}:.local/bin/
 
 clean:
     -rm -rf {{ BINS }}
