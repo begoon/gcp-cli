@@ -5,6 +5,8 @@ import (
 	"encoding/json"
 	"flag"
 	"fmt"
+	"gcp/lib/completion/zsh"
+	"gcp/lib/ext"
 	"io"
 	"io/fs"
 	"os"
@@ -13,9 +15,6 @@ import (
 	"slices"
 	"strings"
 	"time"
-
-	"gcp/lib/completion/zsh"
-	"gcp/lib/ext"
 
 	"github.com/AlecAivazis/survey/v2"
 	"github.com/briandowns/spinner"
@@ -136,8 +135,9 @@ func queryImages(echo bool) []Image {
 
 func textualizeVersions(images []Image) []string {
 	versions := []string{}
+	sizeWidth := maxSizeWidth(images)
 	for _, image := range images {
-		versions = append(versions, formatVersion(image))
+		versions = append(versions, formatVersion(image, sizeWidth))
 	}
 	return versions
 }
@@ -180,8 +180,9 @@ func selectImage(images []Image, current string) (int, string) {
 	}
 
 	imagesSelector := []string{}
+	sizeWidth := maxSizeWidth(images)
 	for _, image := range images {
-		t := formatVersion(image)
+		t := formatVersion(image, sizeWidth)
 
 		matched := false
 		for _, tag := range image.Tags {
@@ -225,17 +226,36 @@ func selectImage(images []Image, current string) (int, string) {
 	return 0, ""
 }
 
-func formatVersion(i Image) string {
+func maxSizeWidth(images []Image) int {
+	sz := 0
+	for _, image := range images {
+		if image.Metadata.ImageSizeBytes != "" {
+			sz = max(sz, len(ext.HumanizeSize(ext.Atoi(image.Metadata.ImageSizeBytes))))
+		}
+	}
+	return sz
+}
+
+func formatVersion(i Image, minSizeWidth int) string {
 	t, err := time.Parse(time.RFC3339, i.CreateTime)
 	ext.Check(err)
 
 	datetime := t.Format(time.DateTime)
 	version := trimVersion(i.Version)
-	size := ext.HumanizeSize(ext.Atoi(i.Metadata.ImageSizeBytes))
+
+	size := ""
+	if i.Metadata.ImageSizeBytes != "" {
+		size = ext.HumanizeSize(ext.Atoi(i.Metadata.ImageSizeBytes))
+	}
+	if len(size) < minSizeWidth {
+		size = strings.Repeat(" ", minSizeWidth-len(size)) + size
+	}
+
 	tags := i.Version
 	if len(i.Tags) > 0 {
 		tags = strings.Join(i.Tags, ", ")
 	}
+
 	return fmt.Sprintf("%s | %v | %s | %v", datetime, version, size, tags)
 }
 
@@ -454,7 +474,8 @@ func revisionsCmd() {
 
 func waitCmd() {
 	lastImage := queryImages(true)[0]
-	fmt.Println(">", formatVersion(lastImage))
+	version := formatVersion(lastImage, 0)
+	fmt.Println(">", version)
 
 	s := spinner.New(
 		spinner.CharSets[14], 100*time.Millisecond,
@@ -466,7 +487,8 @@ func waitCmd() {
 		image := queryImages(false)[0]
 		if lastImage.Version != image.Version {
 			s.Stop()
-			fmt.Println(ext.Color(formatVersion(image), c.Yellow))
+			version := formatVersion(image, 0)
+			fmt.Println(ext.Color(version, c.Yellow))
 			break
 		}
 	}
