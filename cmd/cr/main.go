@@ -38,6 +38,7 @@ func main() {
 		fmt.Println("  c, create      create a new service")
 		fmt.Println("  m, metadata    show image metadata")
 		fmt.Println("  t, terraform   cross-reference terraform")
+		fmt.Println("  v, variables   show environment variables and secrets")
 		fmt.Println("  init           create .cr file")
 		fmt.Println("  completion     generate completion script")
 		fmt.Println()
@@ -85,6 +86,9 @@ func main() {
 
 		case "t", "terraform":
 			terraformCmd()
+
+		case "v", "variables":
+			variablesCmd()
 
 		case "init":
 			initCmd()
@@ -148,9 +152,22 @@ type Service struct {
 	} `json:"metadata"`
 	Spec struct {
 		Template struct {
+			Metadata struct {
+				Annotations map[string]string `json:"annotations"`
+			} `json:"metadata"`
 			Spec struct {
 				Containers []struct {
 					Image string `json:"image"`
+					Env   []struct {
+						Name      string `json:"name"`
+						Value     string `json:"value,omitempty"`
+						ValueFrom *struct {
+							SecretKeyRef struct {
+								Key  string `json:"key"`
+								Name string `json:"name"`
+							} `json:"secretKeyRef"`
+						} `json:"valueFrom,omitempty"`
+					} `json:"env"`
 				} `json:"containers"`
 			} `json:"spec"`
 		} `json:"template"`
@@ -516,6 +533,64 @@ REGION=region
 SERVICE=service
 `
 
+func variablesCmd() {
+	serviceName := ext.SERVICE()
+	project := ext.PROJECT()
+	region := ext.REGION()
+	service := serviceInfo(serviceName, project, region)
+
+	container := service.Spec.Template.Spec.Containers[0]
+
+	// environment variables
+	fmt.Println(ext.Color("env", c.Blue))
+	for _, e := range container.Env {
+		if e.ValueFrom != nil {
+			continue
+		}
+		fmt.Printf("  %s=%s\n", ext.Color(e.Name, c.Yellow), e.Value)
+	}
+
+	// secrets
+	// parse alias→real secret name from annotation "run.googleapis.com/secrets"
+	// format: "alias-1:projects/PROJECT/secrets/SECRET_NAME,alias-2:..."
+	secretAliases := map[string]string{}
+	if mapping := service.Spec.Template.Metadata.Annotations["run.googleapis.com/secrets"]; mapping != "" {
+		for entry := range strings.SplitSeq(mapping, ",") {
+			alias, ref, _ := strings.Cut(entry, ":")
+			// ref is "projects/PROJECT/secrets/SECRET_NAME"
+			parts := strings.Split(ref, "/")
+			if len(parts) >= 4 {
+				secretAliases[alias] = parts[len(parts)-1]
+			}
+		}
+	}
+
+	fmt.Println(ext.Color("\nsecrets", c.Blue))
+	hasSecrets := false
+	for _, e := range container.Env {
+		if e.ValueFrom == nil {
+			continue
+		}
+		hasSecrets = true
+		alias := e.ValueFrom.SecretKeyRef.Name
+		secretVersion := e.ValueFrom.SecretKeyRef.Key
+		secretName := secretAliases[alias]
+		if secretName == "" {
+			secretName = alias
+		}
+		secretLink := fmt.Sprintf("%s/security/secret-manager/secret/%s/versions?project=%s", ext.ConsoleURL, secretName, project)
+		fmt.Printf("  %s → %s\n", ext.Color(e.Name, c.Yellow), ext.Href(secretLink, secretName+":"+secretVersion))
+	}
+	if !hasSecrets {
+		fmt.Println("  (none)")
+	}
+
+	// console link
+	link := fmt.Sprintf("%s/run/detail/%s/%s?project=%s", ext.ConsoleURL, region, serviceName, project)
+	fmt.Println(ext.Color("\nconsole", c.Blue))
+	fmt.Println(" ", link)
+}
+
 func terraformCmd() {
 	tf := ext.TF()
 	fmt.Println(tf)
@@ -578,12 +653,13 @@ func markedMainTF(tf string) []markedFile {
 var CompletionRoot = zsh.Args(
 	zsh.NewArg("h:health", "/health"),
 	zsh.NewArg("r:list", "list revisions"),
-	zsh.NewArg("w:wait", "wait for new iamge revision"),
+	zsh.NewArg("w:wait", "wait for new image revision"),
 	zsh.NewArg("i:info", "show service info"),
 	zsh.NewArg("d:deploy", "deploy a revision (default)"),
 	zsh.NewArg("b:bounce", "bounce the service"),
 	zsh.NewArg("c:create", "create a new service"),
 	zsh.NewArg("m:metadata", "show image metadata"),
 	zsh.NewArg("t:terraform", "cross-reference terraform"),
+	zsh.NewArg("v:variables", "show environment variables and secrets"),
 	zsh.NewArg("init", "create .cr file"),
 )
