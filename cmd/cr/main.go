@@ -306,19 +306,6 @@ func serviceLink(project, region, service string) string {
 	return link
 }
 
-func href(link, text string) string {
-	return fmt.Sprintf("\u001b]8;;%s\u001b\\%s\u001b]8;;\u001b\\", link, text)
-}
-
-func notify(msg string) {
-	if ext.ExecutableExists("osascript") {
-		ext.Quiet(fmt.Sprintf("osascript -e 'display notification \"%s\" with title \"OK\"'", msg))
-	}
-	if ext.ExecutableExists("say") {
-		ext.Quiet(fmt.Sprintf("say \"%s\"", msg))
-	}
-}
-
 // ---
 
 func deploy(service, image, project, region string) string {
@@ -360,7 +347,7 @@ func deployCmd() {
 	cmd := deploy(serviceName, image, ext.PROJECT(), ext.REGION())
 	ext.Run(cmd)
 
-	notify("deployed")
+	ext.Notify("deployed")
 }
 
 func bounceCmd() {
@@ -383,7 +370,7 @@ func bounceCmd() {
 	cmd += " --update-env-vars BOUNCED=" + time.Now().Format(time.RFC3339)
 	ext.Run(cmd)
 
-	notify("bounced")
+	ext.Notify("bounced")
 }
 
 var fStub = flag.String("stub", "", "stub image for new service")
@@ -432,7 +419,7 @@ func createCmd() {
 
 	ext.Run(cmd)
 
-	notify("new service created")
+	ext.Notify("new service created")
 }
 
 func metadataCmd() {
@@ -513,7 +500,7 @@ func waitCmd() {
 			break
 		}
 	}
-	notify("new revision is pushed")
+	ext.Notify("new revision is pushed")
 }
 
 func initCmd() {
