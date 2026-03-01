@@ -5,6 +5,7 @@ import (
 	"encoding/json"
 	"fmt"
 	"os"
+	"os/exec"
 	"strconv"
 	"strings"
 	"sync"
@@ -134,9 +135,20 @@ func Href(link, text string) string {
 	return fmt.Sprintf("\u001b]8;;%s\u001b\\%s\u001b]8;;\u001b\\", link, text)
 }
 
+func ExecutableExists(name string) bool {
+	_, err := exec.LookPath(name)
+	return err == nil
+}
+
 func Notify(msg string) {
-	Quiet(fmt.Sprintf("osascript -e 'display notification \"%s\" with title \"OK\"'", msg))
-	Quiet(fmt.Sprintf("say \"%s\"", msg))
+	osascript := "osascript"
+	if ExecutableExists(osascript) {
+		Quiet(fmt.Sprintf("%s -e 'display notification \"%s\" with title \"OK\"'", osascript, msg))
+	}
+	say := "say"
+	if ExecutableExists(say) {
+		Quiet(fmt.Sprintf("%s \"%s\"", say, msg))
+	}
 }
 
 func parseVariables(content string, values map[string]string) {

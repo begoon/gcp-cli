@@ -311,8 +311,12 @@ func href(link, text string) string {
 }
 
 func notify(msg string) {
-	ext.Quiet(fmt.Sprintf("osascript -e 'display notification \"%s\" with title \"OK\"'", msg))
-	ext.Quiet(fmt.Sprintf("say \"%s\"", msg))
+	if ext.ExecutableExists("osascript") {
+		ext.Quiet(fmt.Sprintf("osascript -e 'display notification \"%s\" with title \"OK\"'", msg))
+	}
+	if ext.ExecutableExists("say") {
+		ext.Quiet(fmt.Sprintf("say \"%s\"", msg))
+	}
 }
 
 // ---
