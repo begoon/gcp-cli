@@ -29,16 +29,16 @@ func Exec(cmd string, echo bool) *script.Pipe {
 	if echo {
 		fmt.Println("\n" + Color(cmd, c.White))
 	}
-	p := script.Exec(cmd).WithStderr(stderr)
+	pipe := script.Exec(cmd).WithStderr(stderr)
 	gac := CLOUDSDK_AUTH_CREDENTIAL_FILE_OVERRIDE()
 	if gac != "" {
 		env := []string{"CLOUDSDK_AUTH_CREDENTIAL_FILE_OVERRIDE=" + gac}
-		p = p.WithEnv(env)
+		pipe = pipe.WithEnv(env)
 		once.Do(func() {
 			fmt.Println("override", Color("CLOUDSDK_AUTH_CREDENTIAL_FILE_OVERRIDE", c.Magenta))
 		})
 	}
-	return p
+	return pipe
 }
 
 func Capture(cmd string, echo bool) []byte {
@@ -143,11 +143,11 @@ func ExecutableExists(name string) bool {
 func Notify(msg string) {
 	osascript := "osascript"
 	if ExecutableExists(osascript) {
-		Quiet(fmt.Sprintf("%s -e 'display notification \"%s\" with title \"OK\"'", osascript, msg))
+		Quiet(fmt.Sprintf(`%s -e 'display notification "%s" with title "OK"'`, osascript, msg))
 	}
 	say := "say"
 	if ExecutableExists(say) {
-		Quiet(fmt.Sprintf("%s \"%s\"", say, msg))
+		Quiet(fmt.Sprintf(`%s "%s"`, say, msg))
 	}
 }
 
