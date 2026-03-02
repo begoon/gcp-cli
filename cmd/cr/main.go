@@ -156,7 +156,8 @@ type Service struct {
 				Annotations map[string]string `json:"annotations"`
 			} `json:"metadata"`
 			Spec struct {
-				Containers []struct {
+				ServiceAccountName string `json:"serviceAccountName"`
+				Containers         []struct {
 					Image string `json:"image"`
 					Env   []struct {
 						Name      string `json:"name"`
@@ -373,7 +374,10 @@ func bounceCmd() {
 	ext.Notify("bounced")
 }
 
-var fStub = flag.String("stub", "", "stub image for new service")
+var (
+	fStub   = flag.String("stub", "", "stub image for new service")
+	fExpand = flag.Bool("x", false, "expand secret values")
+)
 
 func createCmd() {
 	serviceName := ext.SERVICE()
@@ -570,7 +574,15 @@ func variablesCmd() {
 			secretName = alias
 		}
 		secretLink := fmt.Sprintf("%s/security/secret-manager/secret/%s/versions?project=%s", ext.ConsoleURL, secretName, project)
-		fmt.Printf("  %s → %s\n", ext.Color(e.Name, c.Yellow), ext.Href(secretLink, secretName+":"+secretVersion))
+		suffix := ""
+		if *fExpand {
+			cmd := fmt.Sprintf("gcloud secrets versions access %s --secret=%s --project=%s", secretVersion, secretName, project)
+			val, err := ext.Exec(cmd, false).String()
+			if err == nil {
+				suffix = " (" + strings.TrimSpace(val) + ")"
+			}
+		}
+		fmt.Printf("  %s → %s%s\n", ext.Color(e.Name, c.Yellow), ext.Href(secretLink, secretName+":"+secretVersion), suffix)
 	}
 	if !hasSecrets {
 		fmt.Println("  (none)")
@@ -580,6 +592,29 @@ func variablesCmd() {
 	link := fmt.Sprintf("%s/run/detail/%s/%s?project=%s", ext.ConsoleURL, region, serviceName, project)
 	fmt.Println(ext.Color("\nconsole", c.Blue))
 	fmt.Println(" ", link)
+
+	// service account
+	sa := service.Spec.Template.Spec.ServiceAccountName
+	if sa != "" {
+		fmt.Println(ext.Color("\nservice account", c.Blue))
+		fmt.Println(" ", sa)
+		if *fExpand {
+			cmd := fmt.Sprintf(
+				`gcloud projects get-iam-policy %s `+
+					`--flatten="bindings[].members" `+
+					`--filter="bindings.members:serviceAccount:%s" `+
+					`--format="value(bindings.role)"`,
+				project, sa)
+			roles, err := ext.Exec(cmd, false).String()
+			if err == nil {
+				for role := range strings.SplitSeq(strings.TrimSpace(roles), "\n") {
+					if role != "" {
+						fmt.Println("  -", role)
+					}
+				}
+			}
+		}
+	}
 }
 
 func terraformCmd() {
