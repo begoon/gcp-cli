@@ -3,9 +3,11 @@ package ext
 import (
 	"bytes"
 	"encoding/json"
+	"flag"
 	"fmt"
 	"os"
 	"os/exec"
+	"runtime"
 	"strconv"
 	"strings"
 	"sync"
@@ -18,8 +20,15 @@ import (
 	c "github.com/logrusorgru/aurora/v4"
 )
 
-func Die(format string, args ...interface{}) {
+var fDebug = flag.Bool("debug", false, "print stack trace on errors")
+
+func Die(format string, args ...any) {
 	fmt.Println(Color(fmt.Sprintf(format+"\n", args...), c.Red))
+	if *fDebug {
+		buf := make([]byte, 4096)
+		n := runtime.Stack(buf, false)
+		fmt.Println(string(buf[:n]))
+	}
 	os.Exit(1)
 }
 
