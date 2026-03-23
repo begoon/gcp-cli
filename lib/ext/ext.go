@@ -251,8 +251,8 @@ func REGION() string {
 		service = SERVICE()
 		variables["SERVICE"] = service
 	}
-	services_overrides := strings.SplitSeq(regions, ",")
-	for override := range services_overrides {
+	regions_overrides := strings.SplitSeq(regions, ",")
+	for override := range regions_overrides {
 		parts := strings.Split(override, ":")
 		if len(parts) < 2 {
 			Die("invalid REGIONS format, expected SERVICE:REGION, not %s", override)
