@@ -24,10 +24,19 @@ type VM struct {
 	Alias   string `json:"alias"`
 }
 
+type VMConfig struct {
+	Default string `json:"default"`
+	VMs     []VM   `json:"vms"`
+}
+
+var fMachine = flag.String("m", "", "VM name or alias")
+var fExtra = flag.Bool("x", false, "show extra info (ssh keys)")
+
 type Instance struct {
-	ID     string `json:"id"`
-	Name   string `json:"name"`
-	Status string `json:"status"`
+	ID          string `json:"id"`
+	Name        string `json:"name"`
+	Status      string `json:"status"`
+	MachineType string `json:"machineType"`
 
 	Disks []struct {
 		DiskSizeGb string `json:"diskSizeGb"`
@@ -42,6 +51,27 @@ type Instance struct {
 	ServiceAccounts []struct {
 		Email string `json:"email"`
 	} `json:"serviceAccounts"`
+
+	Tags struct {
+		Items []string `json:"items"`
+	} `json:"tags"`
+
+	GuestAccelerators []struct {
+		AcceleratorType  string `json:"acceleratorType"`
+		AcceleratorCount int    `json:"acceleratorCount"`
+	} `json:"guestAccelerators"`
+
+	Metadata struct {
+		Items []struct {
+			Key   string `json:"key"`
+			Value string `json:"value"`
+		} `json:"items"`
+	} `json:"metadata"`
+}
+
+type MachineType struct {
+	GuestCpus int `json:"guestCpus"`
+	MemoryMb  int `json:"memoryMb"`
 }
 
 func main() {
@@ -55,7 +85,7 @@ func main() {
 		fmt.Println("  l, list        list VM instances")
 		fmt.Println("  h, hosts       list ~/" + sshConfig + " hosts and IPs")
 		fmt.Println("  e, edit        edit ~/" + sshConfig)
-		fmt.Println("  m, edit VM     edit VM instance")
+		fmt.Println("  m, edit VM     edit VM config")
 		fmt.Println("  c, configure    update ~/" + sshConfig)
 		fmt.Println("  up, start      start vm")
 		fmt.Println("  down, stop     stop vm")
@@ -108,6 +138,20 @@ func instanceInfo(vm *VM, echo bool) *Instance {
 	return &i
 }
 
+func machineTypeName(i *Instance) string {
+	parts := strings.Split(i.MachineType, "/")
+	return parts[len(parts)-1]
+}
+
+func machineTypeInfo(vm *VM, i *Instance) *MachineType {
+	mt := &MachineType{}
+	cmd := fmt.Sprintf("gcloud compute machine-types describe %s "+
+		"--project %s --zone %s --format json",
+		machineTypeName(i), vm.Project, vm.Zone)
+	ext.Check(json.Unmarshal(ext.Capture(cmd, false), mt))
+	return mt
+}
+
 func instanceLink(vm *VM) string {
 	link := fmt.Sprintf(
 		"%s/compute/instancesDetail/zones/%s/instances/%s?project=%s",
@@ -123,7 +167,6 @@ func vmInfo() *VM {
 	if vmi != nil {
 		return vmi
 	}
-	vm := &VM{}
 	home, err := os.UserHomeDir()
 	if err != nil {
 		ext.Die("error getting home directory: %s", err)
@@ -132,15 +175,33 @@ func vmInfo() *VM {
 	if err != nil {
 		ext.Die("error reading %s: %s", meVM, err)
 	}
-	ext.Check(json.Unmarshal(b, vm))
-	fmt.Println("vm", ext.Color(vm.Name, c.Magenta))
 
-	if vm.GAC == "" {
+	config := &VMConfig{}
+	ext.Check(json.Unmarshal(b, config))
+
+	name := *fMachine
+	if name == "" {
+		name = config.Default
+	}
+
+	for i := range config.VMs {
+		if config.VMs[i].Name == name || config.VMs[i].Alias == name {
+			vmi = &config.VMs[i]
+			break
+		}
+	}
+	if vmi == nil {
+		ext.Die("VM %q not found in %s", name, meVM)
+	}
+
+	fmt.Println("vm", ext.Color(vmi.Name, c.Magenta))
+
+	if vmi.GAC == "" {
 		ext.Die("gac not set in %s", meVM)
 	}
-	gac := os.ExpandEnv(vm.GAC)
+	gac := os.ExpandEnv(vmi.GAC)
 	ext.SetVariable("CLOUDSDK_AUTH_CREDENTIAL_FILE_OVERRIDE", gac)
-	return vm
+	return vmi
 }
 
 func infoCmd() {
@@ -149,15 +210,76 @@ func infoCmd() {
 	printInstance(vm, i)
 }
 
+func onOff(tags []string, tag string) string {
+	for _, t := range tags {
+		if t == tag {
+			return "on"
+		}
+	}
+	return "off"
+}
+
 func printInstance(vm *VM, i *Instance) {
+	mt := machineTypeInfo(vm, i)
 	fmt.Println()
 	fmt.Println("Name:   ", ext.Color(i.Name, c.Cyan))
-	fmt.Println("Disk:   ", ext.Color(i.Disks[0].DiskSizeGb+"GB", c.Cyan))
-	fmt.Println("Email:  ", ext.Color(i.ServiceAccounts[0].Email, c.Cyan))
+	fmt.Println("Type:   ", ext.Color(machineTypeName(i), c.Cyan))
+	fmt.Println("CPU:    ", ext.Color(fmt.Sprintf("%d vCPU", mt.GuestCpus), c.Cyan))
+	fmt.Println("Memory: ", ext.Color(fmt.Sprintf("%.1f GB", float64(mt.MemoryMb)/1024), c.Cyan))
+	if len(i.GuestAccelerators) > 0 {
+		for _, gpu := range i.GuestAccelerators {
+			parts := strings.Split(gpu.AcceleratorType, "/")
+			name := parts[len(parts)-1]
+			fmt.Println("GPU:    ", ext.Color(fmt.Sprintf("%dx %s", gpu.AcceleratorCount, name), c.Cyan))
+		}
+	} else {
+		fmt.Println("GPU:    ", ext.Color("none", c.Cyan))
+	}
+	fmt.Println("Disk:   ", ext.Color(i.Disks[0].DiskSizeGb+" GB", c.Cyan))
 	fmt.Println("IP:     ", ext.Color(i.NetworkInterfaces[0].AccessConfigs[0].NatIP, c.Cyan))
+	fmt.Println("Email:  ", ext.Color(i.ServiceAccounts[0].Email, c.Cyan))
+	fmt.Println("HTTP:   ", ext.Color(onOff(i.Tags.Items, "http-server"), c.Cyan))
+	fmt.Println("HTTPS:  ", ext.Color(onOff(i.Tags.Items, "https-server"), c.Cyan))
+	if len(i.Tags.Items) > 0 {
+		fmt.Println("Tags:   ", ext.Color(strings.Join(i.Tags.Items, ", "), c.Cyan))
+	}
 	fmt.Println("Status: ", ext.Color(i.Status, c.White))
 	fmt.Println()
 	fmt.Println("Link:   ", instanceLink(vm))
+
+	if *fExtra {
+		fmt.Println()
+		fmt.Println(ext.Color("SSH Keys:", c.White))
+		for _, item := range i.Metadata.Items {
+			if item.Key != "ssh-keys" {
+				continue
+			}
+			for _, line := range strings.Split(strings.TrimSpace(item.Value), "\n") {
+				// format: username:key-type base64 comment...
+				user, rest, _ := strings.Cut(line, ":")
+				fields := strings.Fields(rest)
+				keyType := ""
+				comment := ""
+				if len(fields) > 0 {
+					keyType = fields[0]
+				}
+				key := ""
+				if len(fields) > 1 {
+					b := fields[1]
+					if len(b) > 16 {
+						key = b[:8] + "..." + b[len(b)-8:]
+					} else {
+						key = b
+					}
+				}
+				if len(fields) > 2 {
+					comment = strings.Join(fields[2:], " ")
+				}
+				fmt.Println(" ", ext.Color(user, c.Cyan), keyType, key, comment)
+			}
+		}
+	}
+
 	fmt.Println()
 }
 
