@@ -21,6 +21,7 @@ type VM struct {
 	Zone    string `json:"zone"`
 	GAC     string `json:"gac"`
 	Name    string `json:"name"`
+	Disk    string `json:"disk"`
 	Alias   string `json:"alias"`
 }
 
@@ -304,7 +305,7 @@ func pingCmd() {
 
 	fmt.Print(ext.Color("✔️ ", c.Blue))
 	fmt.Println(strings.ReplaceAll(strings.TrimSpace(
-		string(ext.Capture(ssh+"df -h /dev/sda1", false))),
+		string(ext.Capture(ssh+"df -h "+vm.Disk, false))),
 		"\n", ext.Color("\n✔️ ", c.Blue)))
 
 	fmt.Print(ext.Color("✔️ ", c.Blue))
