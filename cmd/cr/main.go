@@ -5,8 +5,6 @@ import (
 	"encoding/json"
 	"flag"
 	"fmt"
-	"gcp/lib/completion/zsh"
-	"gcp/lib/ext"
 	"io"
 	"io/fs"
 	"os"
@@ -15,6 +13,9 @@ import (
 	"slices"
 	"strings"
 	"time"
+
+	"gcp/lib/completion/zsh"
+	"gcp/lib/ext"
 
 	"github.com/AlecAivazis/survey/v2"
 	"github.com/briandowns/spinner"
@@ -466,9 +467,12 @@ func healthCmd() {
 	fmt.Println("\n" + ext.Color("GET ", c.Blue) + ext.Color(url, c.White))
 
 	b, err := script.Get(url).Bytes()
-	ext.Check(err)
+	if err != nil {
+		fmt.Println(ext.Color("unhealthy", c.Red))
+		return
+	}
 
-	var v interface{}
+	var v any
 	ext.Check(json.NewDecoder(bytes.NewReader(b)).Decode(&v))
 
 	b, err = json.MarshalIndent(v, "", "  ")
