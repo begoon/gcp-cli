@@ -23,8 +23,6 @@ cmd/
   ver/      Version bumper (VERSION.txt, package.json, pyproject.toml)
   vs/       VS Code remote directory opener
   path/     PATH inspector
-  tabber/   Tab writer demo
-  try/      Selector demo
 lib/
   ext/      Shared utilities (exec, config, UI, colors, notifications)
   completion/zsh/  ZSH completion generation
