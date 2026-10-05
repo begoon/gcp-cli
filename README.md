@@ -161,11 +161,10 @@ When processing Python metadata, it also updates a matching project entry in `uv
 ```sh
 vs          # select a location, then a project directory
 vs github   # select from ~/github, including ~/github/abc projects
-vs iproov   # select from ~/iproov
 vs vmi      # select a directory on the SSH host vmi
 ```
 
-The built-in location menu contains `github`, `iproov`, and `vmi`. Other local locations can be supplied as an argument relative to your home directory. Recent selections are stored in `~/.vs_history-*` and shown first.
+The built-in location menu includes `github` and `vmi`. Other local locations can be supplied as an argument relative to your home directory. Recent selections are stored in `~/.vs_history-*` and shown first.
 
 ## PATH inspector: `path`
 
