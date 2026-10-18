@@ -13,6 +13,8 @@ import (
 	"strings"
 	"time"
 
+	"gcp/lib/completion"
+	"gcp/lib/completion/bash"
 	"gcp/lib/completion/zsh"
 	"gcp/lib/ext"
 
@@ -51,8 +53,22 @@ func Run() {
 	}
 
 	if args[0] == "completion" {
-		zsh.Script()
-		os.Exit(0)
+		shell := "zsh"
+		if len(args) == 2 {
+			shell = args[1]
+		}
+		if len(args) > 2 {
+			ext.Die("usage: %s completion [bash|zsh]", os.Args[0])
+		}
+		switch shell {
+		case "bash":
+			fmt.Print(bash.Script("cr", CompletionArgs...))
+		case "zsh":
+			zsh.Script()
+		default:
+			ext.Die("unsupported completion shell: %s", shell)
+		}
+		return
 	}
 
 	ext.LoadVariables()
@@ -669,16 +685,19 @@ func markedMainTF(tf string) []markedFile {
 	return files
 }
 
-var CompletionRoot = zsh.Args(
-	zsh.NewArg("h:health", "/health"),
-	zsh.NewArg("r:list", "list revisions"),
-	zsh.NewArg("w:wait", "wait for new image revision"),
-	zsh.NewArg("i:info", "show service info"),
-	zsh.NewArg("d:deploy", "deploy a revision (default)"),
-	zsh.NewArg("b:bounce", "bounce the service"),
-	zsh.NewArg("c:create", "create a new service"),
-	zsh.NewArg("m:metadata", "show image metadata"),
-	zsh.NewArg("t:terraform", "cross-reference terraform"),
-	zsh.NewArg("v:variables", "show environment variables and secrets"),
-	zsh.NewArg("init", "create .cr file"),
-)
+var CompletionArgs = [][]completion.Arg{
+	completion.NewArg("h:health", "/health"),
+	completion.NewArg("r:revisions", "list revisions"),
+	completion.NewArg("w:wait", "wait for new image revision"),
+	completion.NewArg("i:info", "show service info"),
+	completion.NewArg("d:deploy", "deploy a revision (default)"),
+	completion.NewArg("b:bounce", "bounce the service"),
+	completion.NewArg("c:create", "create a new service"),
+	completion.NewArg("m:metadata", "show image metadata"),
+	completion.NewArg("t:terraform", "cross-reference terraform"),
+	completion.NewArg("v:variables", "show environment variables and secrets"),
+	completion.NewArg("init", "create .cr file"),
+	completion.NewArg("completion", "generate completion script"),
+}
+
+var CompletionRoot = zsh.Args(CompletionArgs...)

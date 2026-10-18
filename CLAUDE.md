@@ -29,7 +29,9 @@ internal/
   path/     PATH inspector
 lib/
   ext/      Shared utilities (exec, config, UI, colors, notifications)
+  completion/  Shared completion arguments
   completion/zsh/  ZSH completion generation
+  completion/bash/  Bash completion generation
 ```
 
 ## Key Patterns
@@ -43,7 +45,8 @@ lib/
 - **Terminal links**: `ext.Href(url, text)` creates OSC 8 clickable hyperlinks
 - **Colors**: `ext.Color(text, c.Yellow)` using aurora/v4, imported as `c`
 - **Notifications**: `ext.Notify(msg)` — osascript + say (checks ExecutableExists first)
-- **ZSH completion**: `zsh.Completion(root)` at command entry, `zsh.NewArg("short:long", "desc")`
+- **Bash completion**: `xt completion bash` registers xt, cr, and vm; command names are shared with Zsh
+- **ZSH completion**: `xt completion zsh` registers xt, cr, and vm; `zsh.Completion(root)` at command entry, `zsh.NewArg("short:long", "desc")`
 
 ## Conventions
 

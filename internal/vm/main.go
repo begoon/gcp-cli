@@ -9,6 +9,8 @@ import (
 	"strings"
 	"time"
 
+	"gcp/lib/completion"
+	"gcp/lib/completion/bash"
 	"gcp/lib/completion/zsh"
 	"gcp/lib/ext"
 
@@ -101,6 +103,25 @@ func Run() {
 	args := flags.Args()
 	if len(args) == 0 {
 		args = []string{"i"}
+	}
+
+	if args[0] == "completion" {
+		shell := "zsh"
+		if len(args) == 2 {
+			shell = args[1]
+		}
+		if len(args) > 2 {
+			ext.Die("usage: %s completion [bash|zsh]", os.Args[0])
+		}
+		switch shell {
+		case "bash":
+			fmt.Print(bash.Script("vm", CompletionArgs...))
+		case "zsh":
+			zsh.Script()
+		default:
+			ext.Die("unsupported completion shell: %s", shell)
+		}
+		return
 	}
 
 	for _, cmd := range args {
@@ -533,15 +554,17 @@ func sshHostsCmd() {
 	}
 }
 
-var CompletionRoot = zsh.Args(
-	zsh.NewArg("i:info", "VM instance info (default)"),
-	zsh.NewArg("p:ping", "ping VM"),
-	zsh.NewArg("l:list", "list VM instances"),
-	zsh.NewArg("h:hosts", "list ~/"+sshConfig+" hosts and IPs"),
-	zsh.NewArg("c:configure", "update ~/"+sshConfig),
-	zsh.NewArg("up:start", "start VM"),
-	zsh.NewArg("down:stop", "stop VM"),
-	zsh.NewArg("e:edit", "edit ~/"+sshConfig),
-	zsh.NewArg("m:vm", "edit VM instance ~/"+meVM),
-	zsh.NewArg("completion", "generate completion script"),
-)
+var CompletionArgs = [][]completion.Arg{
+	completion.NewArg("i:info", "VM instance info (default)"),
+	completion.NewArg("p:ping", "ping VM"),
+	completion.NewArg("l:list", "list VM instances"),
+	completion.NewArg("h:hosts", "list ~/"+sshConfig+" hosts and IPs"),
+	completion.NewArg("c:configure", "update ~/"+sshConfig),
+	completion.NewArg("up:start", "start VM"),
+	completion.NewArg("down:stop", "stop VM"),
+	completion.NewArg("e:edit", "edit ~/"+sshConfig),
+	completion.NewArg("m:vm", "edit VM instance ~/"+meVM),
+	completion.NewArg("completion", "generate completion script"),
+}
+
+var CompletionRoot = zsh.Args(CompletionArgs...)

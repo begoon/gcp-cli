@@ -11,6 +11,8 @@ import (
 	"gcp/internal/ver"
 	"gcp/internal/vm"
 	"gcp/internal/vs"
+	"gcp/lib/completion/bash"
+	"gcp/lib/completion/zsh"
 )
 
 var commands = map[string]func(){
@@ -29,6 +31,7 @@ func usage(w io.Writer) {
 	fmt.Fprintln(w, "  ver   Project versions")
 	fmt.Fprintln(w, "  vs    Open projects in VS Code")
 	fmt.Fprintln(w, "  path  Inspect PATH and executables")
+	fmt.Fprintln(w, "  completion <bash|zsh>  Generate shell completion script")
 }
 
 func main() {
@@ -36,6 +39,27 @@ func main() {
 	if _, ok := commands[name]; !ok {
 		if len(os.Args) == 1 || os.Args[1] == "-h" || os.Args[1] == "--help" || os.Args[1] == "help" {
 			usage(os.Stdout)
+			return
+		}
+		if os.Args[1] == "completion" {
+			if len(os.Args) != 3 || (os.Args[2] != "bash" && os.Args[2] != "zsh") {
+				fmt.Fprintln(os.Stderr, "usage: xt completion <bash|zsh>")
+				os.Exit(2)
+			}
+			if os.Args[2] == "zsh" {
+				fmt.Print(zsh.Suite("xt", map[string]string{
+					"cr": cr.CompletionRoot, "vm": vm.CompletionRoot,
+					"ver": "", "vs": "", "path": "",
+					"completion": zsh.Args(zsh.NewArg("bash:zsh", "shell")),
+				}, "cr", "vm"))
+				return
+			}
+			fmt.Print(bash.Suite("xt", map[string]string{
+				"cr":  bash.Args(cr.CompletionArgs...),
+				"vm":  bash.Args(vm.CompletionArgs...),
+				"ver": "", "vs": "", "path": "",
+				"completion": "bash zsh",
+			}, bash.Script("cr", cr.CompletionArgs...), bash.Script("vm", vm.CompletionArgs...)))
 			return
 		}
 		name = os.Args[1]

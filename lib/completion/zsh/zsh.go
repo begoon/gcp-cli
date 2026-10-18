@@ -4,28 +4,15 @@ import (
 	"fmt"
 	"os"
 	"path"
+	"sort"
 	"strings"
+
+	"gcp/lib/completion"
 )
 
-type Arg struct {
-	Name, Descr string
-}
+type Arg = completion.Arg
 
-func newArg(name, descr string) Arg {
-	return Arg{Name: name, Descr: descr}
-}
-
-func NewArg(names, descr string) []Arg {
-	args := make([]Arg, 0)
-	for _, name := range strings.Split(names, ":") {
-		args = append(args, newArg(name, descr))
-	}
-	return args
-}
-
-func (a Arg) String() string {
-	return fmt.Sprintf(`"%s":"%s"`, a.Name, a.Descr)
-}
+var NewArg = completion.NewArg
 
 func Args(args ...[]Arg) string {
 	v := make([]string, 0, len(args))
@@ -60,4 +47,42 @@ func Script() {
 	exe := path.Base(os.Args[0])
 	script := fmt.Sprintf(format, exe, strings.ToUpper(exe))
 	fmt.Print(script)
+}
+
+const suiteHeader = `#compdef %[1]s
+
+_%[1]s() {
+  if (( CURRENT == 2 )); then
+    %[2]s
+    return
+  fi
+  local command=$words[2]
+  words=("${words[@]:1}")
+  (( CURRENT-- ))
+  case "$command" in
+`
+
+// suite generates completion functions without requiring command symlinks
+func Suite(name string, commands map[string]string, standalone ...string) string {
+	var names []string
+	for command := range commands {
+		names = append(names, command)
+	}
+	sort.Strings(names)
+	var root []Arg
+	for _, command := range names {
+		root = append(root, Arg{Name: command})
+	}
+	var out strings.Builder
+	fmt.Fprintf(&out, suiteHeader, name, Args(root))
+	for _, command := range names {
+		if commands[command] != "" {
+			fmt.Fprintf(&out, "    %s) %s ;;\n", command, commands[command])
+		}
+	}
+	fmt.Fprintf(&out, "  esac\n}\ncompdef _%s %s\n", name, name)
+	for _, command := range standalone {
+		fmt.Fprintf(&out, "\n_%s() {\n  %s\n}\ncompdef _%s %s\n", command, commands[command], command, command)
+	}
+	return out.String()
 }

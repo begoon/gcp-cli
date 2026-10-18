@@ -10,6 +10,29 @@ import (
 	"github.com/stretchr/testify/require"
 )
 
+const bashCompletionTestScript = `
+function_name=$1
+shift
+COMP_WORDS=("$@")
+COMP_CWORD=$(($# - 1))
+"$function_name"
+if (( ${#COMPREPLY[@]} )); then
+  printf '%s\n' "${COMPREPLY[@]}"
+fi
+`
+
+const zshCompletionTestScript = `
+_arguments() {
+  print -r -- "$@"
+  print -r -- "$CURRENT:$words[1]"
+}
+function_name=$1
+shift
+words=("$@")
+CURRENT=$#
+"$function_name"
+`
+
 func TestDispatch(t *testing.T) {
 	dir := t.TempDir()
 	binary := filepath.Join(dir, "xt")
@@ -58,6 +81,81 @@ func TestDispatch(t *testing.T) {
 			}
 		})
 	}
+
+	t.Run("bash completion", func(t *testing.T) {
+		bashPath, err := exec.LookPath("bash")
+		require.NoError(t, err)
+		script, err := run(binary, "completion", "bash")
+		require.NoError(t, err, script)
+
+		for _, tc := range []struct {
+			function string
+			words    []string
+			want     string
+		}{
+			{"_xt_bash", []string{"xt", "c"}, "completion\ncr\n"},
+			{"_xt_bash", []string{"xt", "cr", "rev"}, "revisions\n"},
+			{"_xt_bash", []string{"xt", "vm", "st"}, "start\nstop\n"},
+			{"_xt_bash", []string{"xt", "cr", "info", "dep"}, "deploy\n"},
+			{"_xt_bash", []string{"xt", "completion", "b"}, "bash\n"},
+			{"_xt_bash", []string{"xt", "unknown", ""}, ""},
+			{"_xt_bash", []string{"xt", "cr", "no-match"}, ""},
+			{"_cr_bash", []string{"cr", "rev"}, "revisions\n"},
+			{"_vm_bash", []string{"vm", "st"}, "start\nstop\n"},
+		} {
+			cmd := exec.Command(bashPath, append([]string{"--noprofile", "--norc", "-s", "--", tc.function}, tc.words...)...)
+			cmd.Stdin = strings.NewReader(script + bashCompletionTestScript)
+			output, err := cmd.CombinedOutput()
+			require.NoError(t, err, "%s", output)
+			require.Equal(t, tc.want, string(output), "%v", tc.words)
+		}
+		for _, name := range []string{"cr", "vm"} {
+			direct, err := run(binary, name, "completion", "bash")
+			require.NoError(t, err, direct)
+			linked, err := run(filepath.Join(dir, name), "completion", "bash")
+			require.NoError(t, err, linked)
+			require.Equal(t, direct, linked)
+			require.Contains(t, script, direct)
+			_, err = run(binary, name, "completion", "unknown")
+			require.Error(t, err)
+			zsh, err := run(binary, name, "completion", "zsh")
+			require.NoError(t, err, zsh)
+			require.Contains(t, zsh, "#compdef "+name)
+		}
+	})
+
+	t.Run("zsh completion", func(t *testing.T) {
+		zshPath, err := exec.LookPath("zsh")
+		require.NoError(t, err)
+		script, err := run(binary, "completion", "zsh")
+		require.NoError(t, err, script)
+		for _, tc := range []struct {
+			function string
+			words    []string
+			want     string
+			context  string
+		}{
+			{"_xt", []string{"xt", ""}, "cr", "2:xt"},
+			{"_xt", []string{"xt", "cr", "rev"}, "revisions", "2:cr"},
+			{"_xt", []string{"xt", "vm", "st"}, "start", "2:vm"},
+			{"_xt", []string{"xt", "cr", "info", "dep"}, "deploy", "3:cr"},
+			{"_xt", []string{"xt", "completion", ""}, "zsh", "2:completion"},
+			{"_cr", []string{"cr", "rev"}, "revisions", "2:cr"},
+			{"_vm", []string{"vm", "st"}, "start", "2:vm"},
+		} {
+			cmd := exec.Command(zshPath, append([]string{"-f", "-s", "--", tc.function}, tc.words...)...)
+			cmd.Stdin = strings.NewReader("autoload -Uz compinit\ncompinit -D\n" + script + zshCompletionTestScript)
+			output, err := cmd.CombinedOutput()
+			require.NoError(t, err, "%s", output)
+			require.Contains(t, string(output), tc.want)
+			require.Contains(t, string(output), tc.context)
+		}
+		for _, args := range [][]string{{"completion"}, {"completion", "fish"}, {"completion", "zsh", "extra"}} {
+			output, err := run(binary, args...)
+			require.Error(t, err, output)
+			require.Contains(t, output, "usage: xt completion <bash|zsh>")
+		}
+	})
 
 	t.Run("version arguments", func(t *testing.T) {
 		project := t.TempDir()

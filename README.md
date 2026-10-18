@@ -220,16 +220,31 @@ path -f    # also list executable names found in multiple directories
 
 Missing directories are marked in the output.
 
-## Zsh completion
+## Shell completion
+
+For Bash, add this to `~/.bashrc` after `xt` is on your `PATH`:
+
+```sh
+eval "$(xt completion bash)"
+```
+
+This completes tool names after `xt`, and Cloud Run/VM subcommands and aliases for both `xt cr` / `xt vm` and the `cr` / `vm` symlinks. It does not query cloud resources or complete flag values.
+
+For only the standalone commands, use `eval "$(cr completion bash)"` and `eval "$(vm completion bash)"`.
+
+### Zsh
 
 Add the following to `~/.zshrc` after the binaries are on your `PATH`:
 
 ```sh
 autoload -Uz compinit
 compinit
-eval "$(cr completion)"
-eval "$(vm completion)"
+eval "$(xt completion zsh)"
 ```
+
+This registers completion for `xt` and the `cr` / `vm` symlinks. For standalone setup, `cr completion zsh` and `vm completion zsh` are also available.
+
+The existing `completion` command defaults to Zsh; `completion zsh` is also accepted.
 
 ## License
 
