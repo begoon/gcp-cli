@@ -25,8 +25,6 @@ import (
 )
 
 func Run() {
-	zsh.Completion(CompletionRoot)
-
 	flags.Usage = func() {
 		fmt.Printf("usage: %s command [command]...", os.Args[0])
 		fmt.Println("commands:")
@@ -64,7 +62,7 @@ func Run() {
 		case "bash":
 			fmt.Print(bash.Script("cr", CompletionArgs...))
 		case "zsh":
-			zsh.Script()
+			fmt.Print(zsh.Script("cr", CompletionArgs...))
 		default:
 			ext.Die("unsupported completion shell: %s", shell)
 		}

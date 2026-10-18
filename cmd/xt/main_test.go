@@ -121,6 +121,8 @@ func TestDispatch(t *testing.T) {
 			zsh, err := run(binary, name, "completion", "zsh")
 			require.NoError(t, err, zsh)
 			require.Contains(t, zsh, "#compdef "+name)
+			require.NotContains(t, zsh, "_COMPLETE")
+			require.Contains(t, zsh, "_arguments")
 		}
 	})
 
@@ -143,8 +145,13 @@ func TestDispatch(t *testing.T) {
 			{"_cr", []string{"cr", "rev"}, "revisions", "2:cr"},
 			{"_vm", []string{"vm", "st"}, "start", "2:vm"},
 		} {
+			completionScript := script
+			if tc.function != "_xt" {
+				completionScript, err = run(binary, tc.words[0], "completion", "zsh")
+				require.NoError(t, err, completionScript)
+			}
 			cmd := exec.Command(zshPath, append([]string{"-f", "-s", "--", tc.function}, tc.words...)...)
-			cmd.Stdin = strings.NewReader("autoload -Uz compinit\ncompinit -D\n" + script + zshCompletionTestScript)
+			cmd.Stdin = strings.NewReader("autoload -Uz compinit\ncompinit -D\n" + completionScript + zshCompletionTestScript)
 			output, err := cmd.CombinedOutput()
 			require.NoError(t, err, "%s", output)
 			require.Contains(t, string(output), tc.want)

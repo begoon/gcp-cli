@@ -244,6 +244,8 @@ eval "$(xt completion zsh)"
 
 This registers completion for `xt` and the `cr` / `vm` symlinks. For standalone setup, `cr completion zsh` and `vm completion zsh` are also available.
 
+Completion scripts contain their definitions directly; the old `_CR_COMPLETE` / `_VM_COMPLETE` callback variables are no longer supported. Reload your shell setup to replace previously loaded completion functions.
+
 The existing `completion` command defaults to Zsh; `completion zsh` is also accepted.
 
 ## License

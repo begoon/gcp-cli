@@ -80,8 +80,6 @@ type MachineType struct {
 }
 
 func Run() {
-	zsh.Completion(CompletionRoot)
-
 	flags.Usage = func() {
 		fmt.Printf("usage: %s command [command]...", os.Args[0])
 		fmt.Println("commands:")
@@ -117,7 +115,7 @@ func Run() {
 		case "bash":
 			fmt.Print(bash.Script("vm", CompletionArgs...))
 		case "zsh":
-			zsh.Script()
+			fmt.Print(zsh.Script("vm", CompletionArgs...))
 		default:
 			ext.Die("unsupported completion shell: %s", shell)
 		}
@@ -145,7 +143,7 @@ func Run() {
 		case "h", "hosts":
 			sshHostsCmd()
 		case "completion":
-			zsh.Script()
+			fmt.Print(zsh.Script("vm", CompletionArgs...))
 		default:
 			ext.Die("unknown command: %s", cmd)
 		}

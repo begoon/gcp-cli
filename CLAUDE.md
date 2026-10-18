@@ -46,7 +46,7 @@ lib/
 - **Colors**: `ext.Color(text, c.Yellow)` using aurora/v4, imported as `c`
 - **Notifications**: `ext.Notify(msg)` — osascript + say (checks ExecutableExists first)
 - **Bash completion**: `xt completion bash` registers xt, cr, and vm; command names are shared with Zsh
-- **ZSH completion**: `xt completion zsh` registers xt, cr, and vm; `zsh.Completion(root)` at command entry, `zsh.NewArg("short:long", "desc")`
+- **ZSH completion**: `xt completion zsh` registers xt, cr, and vm; standalone scripts use `zsh.Script(name, args...)` with shared command arguments
 
 ## Conventions
 
