@@ -1,4 +1,4 @@
-package main
+package cr
 
 import (
 	"encoding/json"

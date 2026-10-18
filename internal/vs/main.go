@@ -1,4 +1,4 @@
-package main
+package vs
 
 import (
 	"flag"
@@ -13,13 +13,15 @@ import (
 	"gcp/lib/ext"
 )
 
+var flags = flag.NewFlagSet("vs", flag.ExitOnError)
+
 var places = []string{"github", "iproov", "vmi"}
 
-func main() {
-	verbose := flag.Bool("v", false, "verbose")
+func Run() {
+	verbose := flags.Bool("v", false, "verbose")
 
-	flag.Parse()
-	place := flag.Arg(0)
+	flags.Parse(os.Args[1:])
+	place := flags.Arg(0)
 
 	history := readHistory("places")
 	if place == "" {

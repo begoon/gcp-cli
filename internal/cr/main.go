@@ -1,4 +1,4 @@
-package main
+package cr
 
 import (
 	"encoding/json"
@@ -22,10 +22,10 @@ import (
 	c "github.com/logrusorgru/aurora/v4"
 )
 
-func main() {
+func Run() {
 	zsh.Completion(CompletionRoot)
 
-	flag.Usage = func() {
+	flags.Usage = func() {
 		fmt.Printf("usage: %s command [command]...", os.Args[0])
 		fmt.Println("commands:")
 		fmt.Println("  h, health      /health")
@@ -41,11 +41,11 @@ func main() {
 		fmt.Println("  init           create .cr file")
 		fmt.Println("  completion     generate completion script")
 		fmt.Println()
-		flag.PrintDefaults()
+		flags.PrintDefaults()
 	}
-	flag.Parse()
+	flags.Parse(os.Args[1:])
 
-	args := flag.Args()
+	args := flags.Args()
 	if len(args) == 0 {
 		args = []string{"d"}
 	}
@@ -378,9 +378,11 @@ func bounceCmd() {
 	ext.Notify("bounced")
 }
 
+var flags = flag.NewFlagSet("cr", flag.ExitOnError)
+
 var (
-	fStub   = flag.String("stub", "", "stub image for new service")
-	fExpand = flag.Bool("x", false, "expand secret values")
+	fStub   = flags.String("stub", "", "stub image for new service")
+	fExpand = flags.Bool("x", false, "expand secret values")
 )
 
 func createCmd() {

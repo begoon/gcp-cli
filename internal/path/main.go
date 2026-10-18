@@ -1,4 +1,4 @@
-package main
+package path
 
 import (
 	"flag"
@@ -12,13 +12,15 @@ import (
 	c "github.com/logrusorgru/aurora/v4"
 )
 
+var flags = flag.NewFlagSet("path", flag.ExitOnError)
+
 var (
-	fPathDupes  = flag.Bool("d", false, "show duplicate paths")
-	fExeShadows = flag.Bool("f", false, "show shadowed executables")
+	fPathDupes  = flags.Bool("d", false, "show duplicate paths")
+	fExeShadows = flags.Bool("f", false, "show shadowed executables")
 )
 
-func main() {
-	flag.Parse()
+func Run() {
+	flags.Parse(os.Args[1:])
 
 	path := os.Getenv("PATH")
 

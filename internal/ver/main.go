@@ -1,4 +1,4 @@
-package main
+package ver
 
 import (
 	"bytes"
@@ -17,6 +17,8 @@ import (
 
 	"gcp/lib/ext"
 )
+
+var flags = flag.NewFlagSet("ver", flag.ExitOnError)
 
 var projectFiles = []string{"VERSION.txt", "package.json", "pyproject.toml"}
 
@@ -41,18 +43,18 @@ type PackageJSON struct {
 }
 
 var (
-	flagBase    = flag.String("p", ".", "project directory ('.' by default)")
-	flagVerbose = flag.Bool("v", false, "verbose")
+	flagBase    = flags.String("p", ".", "project directory ('.' by default)")
+	flagVerbose = flags.Bool("v", false, "verbose")
 )
 
-func main() {
-	flag.Usage = func() {
+func Run() {
+	flags.Usage = func() {
 		fmt.Printf("usage: %s [flags] [A.B.C | + | [+/-]N]\n", os.Args[0])
 		fmt.Println()
-		flag.PrintDefaults()
+		flags.PrintDefaults()
 	}
 
-	flag.Parse()
+	flags.Parse(os.Args[1:])
 
 	files := find(*flagBase)
 	if *flagVerbose {
@@ -182,7 +184,7 @@ func updateVersion(filename, version string) string {
 	if !semver.IsValid("v" + version) {
 		ext.Die("invalid version %q in %q", c.Red(version), filename)
 	}
-	newVersion := flag.Arg(0)
+	newVersion := flags.Arg(0)
 	if newVersion == "" {
 		return version
 	}

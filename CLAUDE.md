@@ -1,6 +1,6 @@
 # GCP-CLI
 
-Go monorepo of GCP CLI tools. Module name: `gcp`. Go 1.24+.
+Go monorepo of GCP CLI tools. Module name: `gcp`. Go 1.27+.
 
 ## Build & Test
 
@@ -8,16 +8,20 @@ Go monorepo of GCP CLI tools. Module name: `gcp`. Go 1.24+.
 just              # default: test, build, install
 just build        # go test ./... && go build (CGO_ENABLED=0, static)
 just test         # go test ./...
-just install      # copy binaries to ~/bin
+just install      # copy xt to ~/bin
+just install-links # install xt and command symlinks
+just install-remote-links # install Linux xt and symlinks over SSH/SCP
 just build-amd64  # cross-compile for Linux + UPX compress
 ```
 
-Individual commands: `go build ./cmd/cr/`, `go test ./cmd/cr/`
+Build executable: `go build ./cmd/xt/`. Test individual tools: `go test ./internal/cr/`.
 
 ## Project Structure
 
 ```
 cmd/
+  xt/       Shared executable; dispatches by subcommand or symlink name
+internal/
   cr/       Cloud Run manager (deploy, bounce, revisions, secrets, etc.)
   vm/       GCE VM manager (start/stop, SSH config, ping)
   ver/      Version bumper (VERSION.txt, package.json, pyproject.toml)
@@ -46,7 +50,7 @@ lib/
 - Keep functions short; utility code goes in `lib/ext/`
 - Comments lowercase, no period
 - Test file: `main_test.go` alongside `main.go`; use `testify/require`
-- Flags declared as package-level vars: `var fName = flag.Bool(...)`
+- Each tool owns a `flag.FlagSet`; declare flags with `flags.Bool(...)`
 - Group related flags in `var (...)` block
 - No CGO — all builds use `CGO_ENABLED=0`
 - GCP commands use `gcloud` CLI (not API client libraries)

@@ -1,4 +1,4 @@
-package main
+package vm
 
 import (
 	"encoding/json"
@@ -30,8 +30,10 @@ type VMConfig struct {
 	VMs     []VM   `json:"vms"`
 }
 
-var fMachine = flag.String("m", "", "VM name or alias")
-var fExtra = flag.Bool("x", false, "show extra info (ssh keys)")
+var flags = flag.NewFlagSet("vm", flag.ExitOnError)
+
+var fMachine = flags.String("m", "", "VM name or alias")
+var fExtra = flags.Bool("x", false, "show extra info (ssh keys)")
 
 type Instance struct {
 	ID          string `json:"id"`
@@ -75,10 +77,10 @@ type MachineType struct {
 	MemoryMb  int `json:"memoryMb"`
 }
 
-func main() {
+func Run() {
 	zsh.Completion(CompletionRoot)
 
-	flag.Usage = func() {
+	flags.Usage = func() {
 		fmt.Printf("usage: %s command [command]...", os.Args[0])
 		fmt.Println("commands:")
 		fmt.Println("  i, info        VM instance info (default)")
@@ -92,11 +94,11 @@ func main() {
 		fmt.Println("  down, stop     stop vm")
 		fmt.Println("  completion     generate completion script")
 		fmt.Println()
-		flag.PrintDefaults()
+		flags.PrintDefaults()
 	}
-	flag.Parse()
+	flags.Parse(os.Args[1:])
 
-	args := flag.Args()
+	args := flags.Args()
 	if len(args) == 0 {
 		args = []string{"i"}
 	}

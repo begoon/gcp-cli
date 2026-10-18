@@ -12,27 +12,36 @@ A collection of Go command-line tools for Google Cloud and everyday development 
 
 ## Build and install
 
-Requires Go 1.25 or later. From a local checkout:
+Requires Go 1.27 or later. From a local checkout:
 
 ```sh
 git clone https://github.com/begoon/gcp-cli.git
 cd gcp-cli
 go test ./...
-CGO_ENABLED=0 go build -buildvcs=true -o ./ ./...
+CGO_ENABLED=0 go build -buildvcs=true -o xt ./cmd/xt
 mkdir -p ~/bin
-cp cr vm ver vs path ~/bin/
+cp xt ~/bin/
+for name in cr vm ver vs path; do ln -sfn xt ~/bin/"$name"; done
 ```
 
 Add `~/bin` to your `PATH` to run the commands from any directory.
 
-With `just` installed, `just` runs the tests, builds all five binaries, and copies them to `~/bin` (create that directory first). Other recipes:
+All tools share one executable, `xt`. Run `xt cr info`, `xt vs`, or `xt path -f`; the symlinks also let you keep using `cr info`, `vs`, and `path -f`. Flags follow the tool name: `xt vm -m dev info`.
+
+With `just` installed, `just` runs the tests, builds `xt`, installs it to `~/bin`, and creates the command symlinks. Other recipes:
 
 ```sh
-just test         # run all Go tests
-just build        # test and build locally
-just install      # copy existing binaries to ~/bin
-just build-amd64  # build for Linux amd64 and compress with UPX
+just test                  # run all Go tests
+just build                 # test and build xt locally
+just install               # copy existing xt to ~/bin
+just install-links         # install xt and create/update all command symlinks
+just build-amd64            # build Linux amd64 xt and compress with UPX
+just install-remote         # copy amd64/xt to vmi:~/.local/bin
+just install-remote-links   # copy amd64/xt and create/update remote command symlinks
+VM=my-host just install-remote-links
 ```
+
+Link recipes replace existing command binaries or symlinks. Remote installation defaults to SSH host `vmi`; set `VM` to choose another host, and add `~/.local/bin` to its `PATH`.
 
 Cloud commands require `gcloud` and credentials with access to the relevant resources. `cr metadata` also requires `skopeo`. VM connectivity commands use SSH; `vs` requires the `code` CLI and, for remote projects, VS Code Remote - SSH.
 

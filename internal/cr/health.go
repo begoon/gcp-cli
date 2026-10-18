@@ -1,8 +1,7 @@
-package main
+package cr
 
 import (
 	"encoding/json"
-	"flag"
 	"fmt"
 	"io"
 	"net/http"
@@ -14,7 +13,7 @@ import (
 	"gcp/lib/ext"
 )
 
-var fIAPServiceAccount = flag.String("iap-service-account", "", "service account for IAP health checks (overrides IAP_SERVICE_ACCOUNT)")
+var fIAPServiceAccount = flags.String("iap-service-account", "", "service account for IAP health checks (overrides IAP_SERVICE_ACCOUNT)")
 
 func (s Service) iapEnabled() bool {
 	return s.Metadata.Annotations["run.googleapis.com/iap-enabled"] == "true"
