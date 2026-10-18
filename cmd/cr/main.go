@@ -1,7 +1,6 @@
 package main
 
 import (
-	"bytes"
 	"encoding/json"
 	"flag"
 	"fmt"
@@ -20,7 +19,6 @@ import (
 	"github.com/AlecAivazis/survey/v2"
 	"github.com/briandowns/spinner"
 
-	"github.com/bitfield/script"
 	c "github.com/logrusorgru/aurora/v4"
 )
 
@@ -175,6 +173,11 @@ type Service struct {
 		} `json:"template"`
 	} `json:"spec"`
 	Status struct {
+		URL        string `json:"url"`
+		Conditions []struct {
+			Type   string `json:"type"`
+			Status string `json:"status"`
+		} `json:"conditions"`
 		Address struct {
 			URL string `json:"url"`
 		} `json:"address"`
@@ -457,28 +460,12 @@ func infoCmd() {
 		// If the image is fully qualified, print it as a link.
 		fmt.Println(registryLink(currentImage))
 	}
-	healthCmd()
+	showHealth(service)
 }
 
 func healthCmd() {
 	service := serviceInfo(ext.SERVICE(), ext.PROJECT(), ext.REGION())
-	url := service.Status.Address.URL + "/health"
-
-	fmt.Println("\n" + ext.Color("GET ", c.Blue) + ext.Color(url, c.White))
-
-	b, err := script.Get(url).Bytes()
-	if err != nil {
-		fmt.Println(ext.Color("unhealthy", c.Red))
-		return
-	}
-
-	var v any
-	ext.Check(json.NewDecoder(bytes.NewReader(b)).Decode(&v))
-
-	b, err = json.MarshalIndent(v, "", "  ")
-	ext.Check(err)
-
-	fmt.Println(string(b))
+	showHealth(service)
 }
 
 func revisionsCmd() {

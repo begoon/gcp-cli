@@ -290,6 +290,10 @@ func v(name string) string {
 	return v
 }
 
+func IAP_SERVICE_ACCOUNT() string {
+	return variables["IAP_SERVICE_ACCOUNT"]
+}
+
 func CLOUDSDK_AUTH_CREDENTIAL_FILE_OVERRIDE() string {
 	return variables["CLOUDSDK_AUTH_CREDENTIAL_FILE_OVERRIDE"]
 }

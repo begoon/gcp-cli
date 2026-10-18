@@ -65,6 +65,41 @@ cr metadata         # select an image and inspect it with skopeo
 
 Running `cr` without arguments starts the interactive deployment flow. Put flags before subcommands. Multiple subcommands run in sequence.
 
+For services with native Cloud Run IAP enabled, `cr` shows the Cloud Run readiness condition and skips `/health` unless an IAP service account is configured. Readiness does not verify application health. To authenticate the health request, add this to `.cr` or `.env`:
+
+```ini
+IAP_SERVICE_ACCOUNT=health-checker@my-project.iam.gserviceaccount.com
+```
+
+Or run `cr -iap-service-account health-checker@my-project.iam.gserviceaccount.com info`. The setting also enables authenticated checks when IAP is not advertised in the service metadata. `cr` uses `gcloud iam service-accounts sign-jwt` to create a short-lived JWT scoped to the health URL and sends it in `Proxy-Authorization`. This supports Google-managed IAP OAuth clients without a client ID or downloaded service-account key. Your gcloud identity needs `roles/iam.serviceAccountTokenCreator` on that service account, and the service account needs `roles/iap.httpsResourceAccessor` on the IAP resource. See [IAP programmatic authentication](https://docs.cloud.google.com/iap/docs/authentication-howto).
+
+To create the account and allow it to access all current and future IAP-protected web services in a project, replace `my-project` and `you@example.com` below. Run these commands using a gcloud identity with permission to create service accounts and update the relevant IAM policies:
+
+```sh
+IAP_PROJECT=my-project
+IAP_USER=you@example.com
+IAP_SA="health-checker@${IAP_PROJECT}.iam.gserviceaccount.com"
+
+gcloud iam service-accounts create health-checker \
+  --project="$IAP_PROJECT" \
+  --display-name="IAP health checker"
+
+gcloud iam service-accounts add-iam-policy-binding "$IAP_SA" \
+  --project="$IAP_PROJECT" \
+  --member="user:$IAP_USER" \
+  --role=roles/iam.serviceAccountTokenCreator \
+  --condition=None
+
+gcloud projects add-iam-policy-binding "$IAP_PROJECT" \
+  --member="serviceAccount:$IAP_SA" \
+  --role=roles/iap.httpsResourceAccessor \
+  --condition=None
+```
+
+Token-signing permission is scoped to this service account; IAP access is project-wide. Allow a few minutes for IAM changes to propagate before running `cr info`.
+
+Health requests have a 30-second timeout and do not follow redirects. Authentication failures, HTTP errors, and non-JSON responses are reported without terminating `info` or `bounce`; health failures retain the existing non-fatal behavior.
+
 | Command | Alias | Description |
 | --- | --- | --- |
 | `deploy` | `d` | Select and deploy an image to an existing service |
