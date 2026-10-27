@@ -171,14 +171,23 @@ func parseVariables(content string, values map[string]string) {
 		if strings.Contains("#; \t", c) {
 			continue
 		}
-		parts := strings.Split(line, "=")
+		parts := strings.SplitN(line, "=", 2)
 		if len(parts) < 2 {
 			continue
 		}
 		name := strings.TrimSpace(parts[0])
+		conditional := strings.HasSuffix(name, "?")
+		if conditional {
+			name = strings.TrimSpace(strings.TrimSuffix(name, "?"))
+		}
 		value := strings.TrimSpace(parts[1])
 		if name == "" || value == "" {
 			continue
+		}
+		if conditional {
+			if _, exists := values[name]; exists {
+				continue
+			}
 		}
 		values[name] = value
 	}
