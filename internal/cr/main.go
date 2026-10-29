@@ -38,7 +38,7 @@ func Run() {
 		fmt.Println("  m, metadata    show image metadata")
 		fmt.Println("  t, terraform   cross-reference terraform")
 		fmt.Println("  v, variables   show environment variables and secrets")
-		fmt.Println("  init           create .cr file")
+		fmt.Println("  init           create .cloudrun.yaml file")
 		fmt.Println("  completion     generate completion script")
 		fmt.Println()
 		flags.PrintDefaults()
@@ -69,7 +69,12 @@ func Run() {
 		return
 	}
 
-	ext.LoadVariables()
+	if len(args) == 1 && args[0] == "init" {
+		initCmd()
+		return
+	}
+
+	ext.LoadCloudRunVariables()
 
 	for _, cmd := range args {
 		switch cmd {
@@ -515,24 +520,21 @@ func waitCmd() {
 }
 
 func initCmd() {
-	cr := ".cr"
-	if _, err := os.Create(cr); err == nil {
-		ext.Die(".cr already exists")
-	}
-	f, err := os.Create(cr)
+	f, err := os.OpenFile(".cloudrun.yaml", os.O_WRONLY|os.O_CREATE|os.O_EXCL, 0644)
 	ext.Check(err)
-	defer f.Close()
 	_, err = io.WriteString(f, strings.TrimSpace(CR)+"\n")
+	closeErr := f.Close()
 	ext.Check(err)
+	ext.Check(closeErr)
 }
 
 const CR = `
-REPO=europe-docker.pkg.dev/PROJECT/REPO
-NAME=IMAGE
-
-PROJECT=project
-REGION=region
-SERVICE=service
+repo: europe-docker.pkg.dev/my-project/my-repository
+image: my-image
+project: my-project
+region: europe-west1
+services:
+  - name: my-service
 `
 
 func variablesCmd() {
@@ -694,7 +696,7 @@ var CompletionArgs = [][]completion.Arg{
 	completion.NewArg("m:metadata", "show image metadata"),
 	completion.NewArg("t:terraform", "cross-reference terraform"),
 	completion.NewArg("v:variables", "show environment variables and secrets"),
-	completion.NewArg("init", "create .cr file"),
+	completion.NewArg("init", "create .cloudrun.yaml file"),
 	completion.NewArg("completion", "generate completion script"),
 }
 

@@ -47,7 +47,38 @@ Cloud commands require `gcloud` and credentials with access to the relevant reso
 
 ## Cloud Run: `cr`
 
-Create a `.cr` file in your project directory:
+Run `cr init` to create `.cloudrun.yaml` in your project directory (existing files
+are never overwritten), then edit its values:
+
+```yaml
+repo: europe-docker.pkg.dev/my-project/my-repository
+image: my-image
+project: my-project
+region: europe-west1
+services:
+  - name: my-service
+  - name: other-service
+    project: other-project
+    region: europe-west2
+    repo: europe-docker.pkg.dev/other-project/other-repository
+```
+
+`repo` and `image` form the registry image path. All four top-level values and
+`services` are required. Each service may override `repo`, `image`, `project`, and
+`region`. A multi-service file prompts once; all commands in the invocation use
+that selection, including image lookup for `cr w d`. Use `services: []` for
+image-only operations; commands requiring a service then fail explicitly.
+
+When present, `.cloudrun.yaml` is the sole configuration source: `.cr`, `.env`, and
+`Makefile` are not read, nor is any parent/root configuration. Invalid YAML,
+unknown keys, duplicate names, and missing fields are errors, with no
+fallback. Optional `tf`, `iap_service_account`, and `credential_file` replace the
+fallback `TF`, `IAP_SERVICE_ACCOUNT`, and `CLOUDSDK_AUTH_CREDENTIAL_FILE_OVERRIDE`
+settings. Keep credential contents out of this file. Normal gcloud authentication
+still applies when no credential file is specified.
+
+When `.cloudrun.yaml` is absent, existing fallback configuration remains supported:
+create a `.cr` file in your project directory:
 
 ```ini
 REPO=europe-docker.pkg.dev/my-project/my-repository
@@ -74,7 +105,7 @@ cr metadata         # select an image and inspect it with skopeo
 
 Running `cr` without arguments starts the interactive deployment flow. Put flags before subcommands. Multiple subcommands run in sequence.
 
-For services with native Cloud Run IAP enabled, `cr` shows the Cloud Run readiness condition and skips `/health` unless an IAP service account is configured. Readiness does not verify application health. To authenticate the health request, add this to `.cr` or `.env`:
+For services with native Cloud Run IAP enabled, `cr` shows the Cloud Run readiness condition and skips `/health` unless an IAP service account is configured. Readiness does not verify application health. To authenticate the health request, set `iap_service_account` in `.cloudrun.yaml`, or add this to fallback `.cr` or `.env`:
 
 ```ini
 IAP_SERVICE_ACCOUNT=health-checker@my-project.iam.gserviceaccount.com

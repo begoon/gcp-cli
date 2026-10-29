@@ -223,6 +223,12 @@ func PROJECT() string {
 }
 
 func SERVICE() string {
+	if cloudRunConfig != nil {
+		if selectedCloudRunService == "" {
+			Die("no services configured in .cloudrun.yaml")
+		}
+		return selectedCloudRunService
+	}
 	services := SERVICES()
 	if len(services) < 2 {
 		return services[0]
@@ -236,6 +242,13 @@ func SERVICE() string {
 }
 
 func SERVICES() []string {
+	if cloudRunConfig != nil {
+		names := make([]string, len(cloudRunConfig.Services))
+		for i, service := range cloudRunConfig.Services {
+			names[i] = service.Name
+		}
+		return names
+	}
 	v := variables["SERVICE_NAME"]
 	if v != "" {
 		return []string{v}
