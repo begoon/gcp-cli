@@ -167,6 +167,19 @@ PROJECTS=dev-api:my-dev-project,prod-api:my-prod-project
 REGIONS=dev-api:europe-west1,prod-api:europe-west2
 ```
 
+Overrides are keyed by the full service name. Services without a matching override use the default `REGION` or `PROJECT` from `.env`.
+
+For example, to select between the Bare and GPU deployments while overriding only the GPU region:
+
+```ini
+PROJECT=my-project
+REGION=europe-west2
+SERVICE_NAMES=bare-api,gpu-api
+REGIONS=gpu-api:europe-west1
+```
+
+Replace an existing `SERVICE` entry with `SERVICE_NAMES`. Selecting `bare-api` uses `europe-west2`; selecting `gpu-api` uses `europe-west1`. Both use the same project.
+
 `cr terraform` additionally requires `TF` pointing to a Terraform directory. It searches `main.tf` files containing `# @mark=` and the project name, matching `<name>_image_tag` settings for services named `<environment>-<name>`.
 
 ## Compute Engine: `vm`
